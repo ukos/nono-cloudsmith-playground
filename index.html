@@ -163,7 +163,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.7 — 実践編シナリオ3つ</p>
+    <p class="ver">CLOUDSMITH prototype v0.8 — AWS／Azure／GCP対応</p>
   </section>
 
   <!-- MODE SELECT -->
@@ -171,8 +171,8 @@
     <h2>編を選ぶ</h2>
     <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学びます。</p>
     <button class="btn primary" id="btn-mode-basics">基礎編 ― 概念カード</button>
-    <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS）</button>
-    <button class="btn primary" id="btn-mode-prac">実践編 ― 盤面の比較試作</button>
+    <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS／Azure／GCP）</button>
+    <button class="btn primary" id="btn-mode-prac">実践編 ― グラフ盤面（AWS／Azure／GCP）</button>
     <button class="btn" disabled>研鑽編 ― 準備中</button>
     <button class="btn" id="btn-mode-title">タイトルへもどる</button>
   </section>
@@ -201,10 +201,20 @@
     <div id="result"></div>
   </section>
 
+  <!-- EDITION SELECT -->
+  <section id="scr-edition" class="screen">
+    <h2 id="edition-title">クラウドを選ぶ</h2>
+    <p class="sub">問題はどのクラウドも原則同じです。カードに併記されるサービス名が、選んだクラウドのものになります。</p>
+    <button class="btn primary" id="btn-ed-aws">AWS編</button>
+    <button class="btn primary" id="btn-ed-azure">Azure編</button>
+    <button class="btn primary" id="btn-ed-gcp">GCP編</button>
+    <button class="btn" id="btn-ed-back">編の選択へもどる</button>
+  </section>
+
   <!-- INTRO MISSION SELECT -->
   <section id="scr-iselect" class="screen">
-    <h2>入門編 ― 機能カード（AWS）</h2>
-    <p class="sub">カードは「機能名」が主役で、対応する AWS のサービス名を小さく併記しています。カードを選んで、正しい層（ゾーン）に置いてください。ミッション1〜3が本線、最後が別線（ECサイト構築）です。</p>
+    <h2 id="iselect-title">入門編 ― 機能カード</h2>
+    <p class="sub" id="iselect-sub"></p>
     <div id="imission-list"></div>
     <button class="btn" id="btn-iselect-back">編の選択へもどる</button>
   </section>
@@ -226,7 +236,8 @@
 
   <!-- PRACTICAL: BOARD COMPARISON -->
   <section id="scr-prac" class="screen">
-    <h2>実践編 ― 盤面の比較試作</h2>
+    <h2>実践編 ― グラフ盤面シナリオ</h2>
+    <p class="sub" id="prac-cloud" style="margin-top:0"></p>
     <p class="sub">盤面は<b>グラフ盤面を本採用</b>としました（置いて、線でつなぐ方式。つながりが一番わかりやすいため）。ヘックス盤面（隣り合えばつながっている方式）は、比較試作として残してあります。シナリオは3つあります。</p>
     <div id="prac-list"></div>
     <button class="btn" id="btn-prac-hex">ヘックス盤面で試す（シナリオ1の比較用）</button>
@@ -338,6 +349,10 @@ let cur = 0;                 // current mission index
 let board = Array(SLOTS).fill(null);
 let selected = null;         // selected cardId from hand
 const SAVE_KEY = "cloudsmith-basics-v1";
+const CLOUD_LABEL = {aws:"AWS", azure:"Azure", gcp:"GCP"};
+let cloud = "aws";
+try{ const savedCloud = localStorage.getItem("cloudsmith-cloud-v1"); if(savedCloud && CLOUD_LABEL[savedCloud]) cloud = savedCloud; }catch(e){}
+let editionTarget = "intro";
 let progress = {};
 try{ progress = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); }catch(e){ progress = {}; }
 
@@ -466,27 +481,27 @@ $("#btn-judge").addEventListener("click", judge);
 "use strict";
 /* ============ INTRO: function cards (AWS) & zone board ============ */
 const ICARDS = {
-  igw:  {name:"インターネットの入口", aws:"Internet Gateway",           cost:1, desc:"外とつながる唯一の入口"},
-  alb:  {name:"振り分け",             aws:"Application Load Balancer",  cost:2, desc:"来た人を、空いている先へ振り分ける"},
-  waf:  {name:"守りの壁",             aws:"AWS WAF",                    cost:1, desc:"Webへの攻撃を入口で止める"},
-  ec2:  {name:"仮想サーバー",         aws:"Amazon EC2",                 cost:3, desc:"処理を行う汎用のサーバー"},
-  rds:  {name:"データベース",         aws:"Amazon RDS",                 cost:3, desc:"業務データを守って置く"},
-  s3:   {name:"ファイル置き場",       aws:"Amazon S3",                  cost:1, desc:"ファイルや画像の置き場"},
-  iam:  {name:"鍵の管理",             aws:"AWS IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
-  watch:{name:"見張り",               aws:"Amazon CloudWatch",          cost:1, desc:"状態を見張り、異常を知らせる"},
-  dns:  {name:"名前解決",             aws:"Amazon Route 53",            cost:1, desc:"名前から行き先を引く"},
-  dx:   {name:"閉域接続",             aws:"AWS Direct Connect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
-  plink:{name:"閉域の接続口",         aws:"AWS PrivateLink",            cost:2, desc:"閉域のままサービスへつなぐ口"},
-  trail:{name:"証跡の記録",           aws:"AWS CloudTrail",             cost:1, desc:"誰が・何をしたかの記録"},
-  idc:  {name:"本人確認の窓口",       aws:"AWS IAM Identity Center",    cost:2, desc:"使う人が本人かどうかを確かめる"},
-  ava:  {name:"検証つき接続",         aws:"AWS Verified Access",        cost:3, desc:"本人と端末を確かめてから、必要なアプリにだけつなぐ"},
-  cdn:  {name:"配信の高速化",         aws:"Amazon CloudFront",          cost:2, desc:"ページや画像を、近い場所から速く届ける"},
-  ddb:  {name:"柔軟なデータベース",   aws:"Amazon DynamoDB",            cost:3, desc:"カタログやカートのような、形の柔軟なデータ向き"},
-  sqs:  {name:"順番待ちの列",         aws:"Amazon SQS",                 cost:1, desc:"注文が殺到しても、列で受けて順に処理する"},
-  pay:  {name:"決済の外部連携",       aws:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"},
-  agg:  {name:"集計・匿名化",         aws:"AWS Glue",                   cost:2, desc:"生データを、集計して個人が分からない形に変える"},
-  pub:  {name:"公開用データ置き場",   aws:"Amazon S3",                  cost:1, desc:"公開してよい形になったデータだけを置く"},
-  dash: {name:"画面の表示",           aws:"Amazon QuickSight",          cost:3, desc:"ダッシュボードの画面そのもの"}
+  igw:  {name:"インターネットの入口", aws:"Internet Gateway", azure:"Azure NAT Gateway", gcp:"Cloud NAT",           cost:1, desc:"外とつながる唯一の入口"},
+  alb:  {name:"振り分け",             aws:"Application Load Balancer", azure:"Azure Application Gateway", gcp:"Google Cloud Load Balancing",  cost:2, desc:"来た人を、空いている先へ振り分ける"},
+  waf:  {name:"守りの壁",             aws:"AWS WAF", azure:"Azure Web Application Firewall", gcp:"Google Cloud Armor",                    cost:1, desc:"Webへの攻撃を入口で止める"},
+  ec2:  {name:"仮想サーバー",         aws:"Amazon EC2", azure:"Azure Virtual Machines", gcp:"Compute Engine",                 cost:3, desc:"処理を行う汎用のサーバー"},
+  rds:  {name:"データベース",         aws:"Amazon RDS", azure:"Azure SQL Database", gcp:"Cloud SQL",                 cost:3, desc:"業務データを守って置く"},
+  s3:   {name:"ファイル置き場",       aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Cloud Storage",                  cost:1, desc:"ファイルや画像の置き場"},
+  iam:  {name:"鍵の管理",             aws:"AWS IAM", azure:"Azure RBAC", gcp:"Cloud IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
+  watch:{name:"見張り",               aws:"Amazon CloudWatch", azure:"Azure Monitor", gcp:"Cloud Monitoring",          cost:1, desc:"状態を見張り、異常を知らせる"},
+  dns:  {name:"名前解決",             aws:"Amazon Route 53", azure:"Azure DNS", gcp:"Cloud DNS",            cost:1, desc:"名前から行き先を引く"},
+  dx:   {name:"閉域接続",             aws:"AWS Direct Connect", azure:"Azure ExpressRoute", gcp:"Cloud Interconnect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
+  plink:{name:"閉域の接続口",         aws:"AWS PrivateLink", azure:"Azure Private Link", gcp:"Private Service Connect",            cost:2, desc:"閉域のままサービスへつなぐ口"},
+  trail:{name:"証跡の記録",           aws:"AWS CloudTrail", azure:"Azure Activity Log", gcp:"Cloud Audit Logs",             cost:1, desc:"誰が・何をしたかの記録"},
+  idc:  {name:"本人確認の窓口",       aws:"AWS IAM Identity Center", azure:"Microsoft Entra ID", gcp:"Cloud Identity",    cost:2, desc:"使う人が本人かどうかを確かめる"},
+  ava:  {name:"検証つき接続",         aws:"AWS Verified Access", azure:"Microsoft Entra Private Access", gcp:"Identity-Aware Proxy",        cost:3, desc:"本人と端末を確かめてから、必要なアプリにだけつなぐ"},
+  cdn:  {name:"配信の高速化",         aws:"Amazon CloudFront", azure:"Azure Front Door", gcp:"Cloud CDN",          cost:2, desc:"ページや画像を、近い場所から速く届ける"},
+  ddb:  {name:"柔軟なデータベース",   aws:"Amazon DynamoDB", azure:"Azure Cosmos DB", gcp:"Firestore",            cost:3, desc:"カタログやカートのような、形の柔軟なデータ向き"},
+  sqs:  {name:"順番待ちの列",         aws:"Amazon SQS", azure:"Azure Service Bus", gcp:"Pub/Sub",                 cost:1, desc:"注文が殺到しても、列で受けて順に処理する"},
+  pay:  {name:"決済の外部連携",       aws:"外部サービス", azure:"外部サービス", gcp:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"},
+  agg:  {name:"集計・匿名化",         aws:"AWS Glue", azure:"Azure Data Factory", gcp:"Dataflow",                   cost:2, desc:"生データを、集計して個人が分からない形に変える"},
+  pub:  {name:"公開用データ置き場",   aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Cloud Storage",                  cost:1, desc:"公開してよい形になったデータだけを置く"},
+  dash: {name:"画面の表示",           aws:"Amazon QuickSight", azure:"Microsoft Power BI", gcp:"Looker Studio",          cost:3, desc:"ダッシュボードの画面そのもの"}
 };
 const IMISSIONS = [
   {
@@ -591,10 +606,12 @@ function zoneCount(zid){ return Object.values(iplace).filter(z=> z===zid).length
 function icardHTML(id){
   const c = ICARDS[id];
   return `<div class="card k-${id}" data-card="${id}">
-    <div class="nm">${c.name}</div><div class="aws">AWS: ${c.aws}</div>
+    <div class="nm">${c.name}</div><div class="aws">${c[cloud] || c.aws}</div>
     <div class="ds">${c.desc}</div><div class="ct">コスト ${c.cost}</div></div>`;
 }
 function renderISelect(){
+  $("#iselect-title").textContent = `入門編 ― 機能カード（${CLOUD_LABEL[cloud]}）`;
+  $("#iselect-sub").textContent = `カードは「機能名」が主役で、対応する ${CLOUD_LABEL[cloud]} のサービス名を小さく併記しています。カードを選んで、正しい層（ゾーン）に置いてください。ミッション1〜3が本線、最後が別線（ECサイト構築）です。`;
   const list = $("#imission-list");
   list.innerHTML = "";
   IMISSIONS.forEach((m,i)=>{
@@ -693,9 +710,24 @@ function ijudge(){
   box.scrollIntoView({behavior:"smooth", block:"start"});
 }
 $("#btn-mode-basics").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
-$("#btn-mode-intro").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
+function openEdition(target){
+  editionTarget = target;
+  $("#edition-title").textContent = (target==="intro"? "入門編" : "実践編") + " ― クラウドを選ぶ";
+  show("scr-edition");
+}
+function chooseCloud(c){
+  cloud = c;
+  try{ localStorage.setItem("cloudsmith-cloud-v1", c); }catch(e){}
+  if(editionTarget==="intro"){ renderISelect(); show("scr-iselect"); }
+  else{ renderPrac(); show("scr-prac"); }
+}
+$("#btn-mode-intro").addEventListener("click", ()=> openEdition("intro"));
+$("#btn-ed-aws").addEventListener("click", ()=> chooseCloud("aws"));
+$("#btn-ed-azure").addEventListener("click", ()=> chooseCloud("azure"));
+$("#btn-ed-gcp").addEventListener("click", ()=> chooseCloud("gcp"));
+$("#btn-ed-back").addEventListener("click", ()=> show("scr-mode"));
 $("#btn-mode-title").addEventListener("click", ()=> show("scr-title"));
-$("#btn-iselect-back").addEventListener("click", ()=> show("scr-mode"));
+$("#btn-iselect-back").addEventListener("click", ()=> openEdition("intro"));
 $("#btn-iplay-back").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
 $("#btn-ireset").addEventListener("click", ()=>{ iplace={}; isel=null; $("#iresult").className=""; $("#iresult").innerHTML=""; renderIPlay(); });
 $("#btn-ijudge").addEventListener("click", ijudge);
@@ -778,6 +810,7 @@ function pracJudge(adj, place, scen, saveId, box){
   box.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function renderPrac(){
+  $("#prac-cloud").textContent = `クラウド： ${CLOUD_LABEL[cloud]}編（カードの併記名が ${CLOUD_LABEL[cloud]} のサービス名になります）`;
   const list = $("#prac-list");
   list.innerHTML = "";
   PRACS.forEach((scen,i)=>{
@@ -972,8 +1005,8 @@ function renderHex(){
 }
 
 /* ---------- wiring ---------- */
-$("#btn-mode-prac").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
-$("#btn-prac-back").addEventListener("click", ()=> show("scr-mode"));
+$("#btn-mode-prac").addEventListener("click", ()=> openEdition("prac"));
+$("#btn-prac-back").addEventListener("click", ()=> openEdition("prac"));
 $("#btn-prac-hex").addEventListener("click", startHex);
 $("#btn-gmode-place").addEventListener("click", ()=> setGMode("place"));
 $("#btn-gmode-link").addEventListener("click", ()=> setGMode("link"));
