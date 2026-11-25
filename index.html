@@ -77,6 +77,8 @@
     background:rgba(255,255,255,.03); cursor:pointer;
   }
   .slot.filled{border-style:solid; border-color:transparent; background:transparent; padding:0;}
+  .slot.fixed{opacity:.92;}
+  .slot .fx{font-size:10px; color:var(--sub); text-align:center; margin-top:2px; letter-spacing:.06em;}
   .slot .empty-label{color:rgba(157,185,221,.6); font-size:11px;}
   .arrow{align-self:center; color:var(--teal); font-size:13px; flex:0 0 auto;}
   .depth{display:flex; gap:6px; margin:0 0 4px;}
@@ -185,7 +187,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.13 — 外部レビューを受けた実践編の直し</p>
+    <p class="ver">CLOUDSMITH prototype v0.14 — 外部レビューを受けた他3編の直し</p>
     <p class="ver" style="margin-top:6px">非公式の学習用ゲームです。登場するサービス名は各社の商標であり、各社との提携関係はありません。</p>
   </section>
 
@@ -354,63 +356,67 @@ const MISSIONS = [
       {must:true,  text:"公開サーバーと大事なデータの間に「仕切り」を置く", why:"間に仕切りがあると、外からの通り道をここで止められる。", test:b=>placed(b,"web")&&placed(b,"vault")&&placed(b,"fw")&&P(b,"fw")>P(b,"web")&&P(b,"fw")<P(b,"vault")},
       {must:false, text:"大事なデータを一番奥（6）に置く", why:"一番奥が、最も外から遠くて安全な場所。", test:b=>P(b,"vault")===5},
       {must:false, text:"見張り記録を置く", why:"何かあったとき、記録がないと「何が起きたか」が分からない。", test:b=>placed(b,"log")},
-      {must:false, text:"控えを置く", why:"壊されたり消されたりしても、控えがあれば元に戻せる。", test:b=>placed(b,"copy")}
+      {must:false, text:"控えを、公開サーバーより奥に置く", why:"壊されたり消されたりしても、控えがあれば元に戻せる。控えも、外から直接触れる場所には置かない。", test:b=>placed(b,"copy")&&placed(b,"web")&&P(b,"copy")>P(b,"web")}
     ]
   },
   {
     id:"m2", title:"ミッション2 ― 社内だけの道具を守ろう",
-    brief:"社内の人だけが使う<b>社内サーバー</b>を用意したい。外の人には見せないし、触らせない。社内の大事なデータは、さらに奥に置くこと。",
-    hand:["inside","fw","gate","vault","web","log"], budget:12, stars3:1,
+    brief:"社内の人だけが使う<b>社内サーバー</b>を用意したい。外の人には見せないし、触らせない。<b>使う人が社員本人かどうかも、門番で確かめる</b>こと。社内の大事なデータは、さらに奥に置くこと。",
+    hand:["inside","fw","gate","vault","web","log","copy"], budget:11, stars3:1,
     rules:[
       {must:true,  text:"社内サーバーを置く", why:"使う道具そのものが要る。", test:b=>placed(b,"inside")},
+      {must:true,  text:"大事なデータを置く", why:"守る対象そのもの。置き忘れると、構成として完成しない。", test:b=>placed(b,"vault")},
       {must:true,  text:"公開サーバーは置かない", why:"社内だけの道具に「外に見せる置き場」は要らない。置くと、それだけ外から狙われる入口が増える。", test:b=>!placed(b,"web")},
-      {must:true,  text:"社内サーバーの手前に「門番」を置く", why:"社内の人かどうかを、入る前に確かめる。門番より奥に置くと意味がない。", test:b=>placed(b,"gate")&&placed(b,"inside")&&P(b,"gate")<P(b,"inside")},
+      {must:true,  text:"「仕切り」の奥に「門番」を置く（どちらも社内サーバーの手前）", why:"まず仕切りで区切り、その内側で本人を確かめる。守りの並びはこの順が基本。", test:b=>placed(b,"fw")&&placed(b,"gate")&&placed(b,"inside")&&P(b,"fw")<P(b,"gate")&&P(b,"gate")<P(b,"inside")},
       {must:true,  text:"社内サーバーの手前に「仕切り」を置く", why:"外からの通り道を、まず仕切りで区切る。", test:b=>placed(b,"fw")&&placed(b,"inside")&&P(b,"fw")<P(b,"inside")},
       {must:true,  text:"大事なデータは、社内サーバーより奥に置く", why:"道具よりも、その中身の方が大事。データはさらに奥へ。", test:b=>placed(b,"vault")&&placed(b,"inside")&&P(b,"vault")>P(b,"inside")},
       {must:false, text:"見張り記録を置く", why:"社内の道具こそ「誰が使ったか」の記録が効く。", test:b=>placed(b,"log")},
+      {must:false, text:"控えを、社内サーバーより奥に置く", why:"壊れても戻せる控えは、道具と同じ場所に置かない。", test:b=>placed(b,"copy")&&placed(b,"inside")&&P(b,"copy")>P(b,"inside")}
     ]
   },
   {
     id:"m3", title:"ミッション3 ― 大事なデータを守りぬこう",
-    brief:"会社の<b>大事なデータ</b>を、できる限り固く守りたい。ホームページの公開は続けるが、データには何重もの守りをかけること。予算は限られているので、全部は置けない。",
-    hand:["web","fw","gate","seal","vault","copy","line","log"], budget:14, stars3:1,
+    brief:"会社の<b>大事なデータ</b>を、できる限り固く守りたい。ホームページの公開は続けるが、データには何重もの守りをかけること。置ける場所（マス）は限られているので、全部は置けない。",
+    hand:["web","fw","gate","seal","vault","copy","log"], budget:13, stars3:1,
     rules:[
+      {must:true,  text:"公開サーバーを置く", why:"ホームページの公開は続ける、が前提。", test:b=>placed(b,"web")},
       {must:true,  text:"大事なデータを一番奥（6）に置く", why:"最も大事な物は、最も外から遠い場所へ。", test:b=>P(b,"vault")===5},
       {must:true,  text:"大事なデータの直前に「封印」を置く", why:"万一たどり着かれても、中身を見られないようにする最後の守り。", test:b=>placed(b,"seal")&&placed(b,"vault")&&P(b,"seal")===P(b,"vault")-1},
       {must:true,  text:"「仕切り」の奥に「門番」を置く（二重の守り）", why:"仕切りで区切り、その内側で本人を確かめる。守りは重ねるもの。", test:b=>placed(b,"fw")&&placed(b,"gate")&&P(b,"gate")>P(b,"fw")},
       {must:true,  text:"公開サーバーは「仕切り」より手前に置く", why:"外に見せる物は仕切りの外側、守る物は内側。この線引きが崩れると守りにならない。", test:b=>placed(b,"web")&&placed(b,"fw")&&P(b,"web")<P(b,"fw")},
       {must:false, text:"控えを置く", why:"守りを破られても、控えがあれば仕事は続けられる。", test:b=>placed(b,"copy")},
-      {must:false, text:"見張り記録を置く", why:"守りの成否は、記録で確かめる。", test:b=>placed(b,"log")},
-      {must:false, text:"専用通路を置く", why:"大事なやり取りは、外の通り道そのものを使わない手もある。", test:b=>placed(b,"line")}
+      {must:false, text:"見張り記録を置く", why:"守りの成否は、記録で確かめる。", test:b=>placed(b,"log")}
     ]
   },
   {
     id:"m4", title:"ミッション4 ― お店のページと注文データを守ろう",
-    brief:"ネットのお店を開く。商品ページは外の人に見せるが、<b>注文データ</b>は大事なデータとして守ること。注文の前には、<b>本人かどうかを確かめる</b>のも忘れずに。",
+    brief:"ネットのお店を開く。商品ページは外の人に見せるが、<b>注文データ</b>は大事なデータとして守ること。注文の前には、<b>本人かどうかを確かめる</b>のも忘れずに。できれば、データには<b>封もしておきたい</b>。",
     hand:["web","fw","gate","vault","seal","log","copy"], budget:13, stars3:2,
     rules:[
       {must:true,  text:"公開サーバーを置く", why:"お店のページは、外から届く場所に置く。", test:b=>placed(b,"web")},
       {must:true,  text:"大事なデータ（注文データ）を置く", why:"守る対象そのもの。", test:b=>placed(b,"vault")},
       {must:true,  text:"大事なデータは、公開サーバーより奥に置く", why:"見せる物と守る物は、分けて置く。", test:b=>placed(b,"web")&&placed(b,"vault")&&P(b,"vault")>P(b,"web")},
       {must:true,  text:"公開サーバーと大事なデータの間に「仕切り」を置く", why:"外からの通り道は、仕切りで止められるようにする。", test:b=>placed(b,"web")&&placed(b,"vault")&&placed(b,"fw")&&P(b,"fw")>P(b,"web")&&P(b,"fw")<P(b,"vault")},
-      {must:true,  text:"「門番」を、大事なデータの手前に置く", why:"注文データに触る前に、本人かどうかを確かめる。", test:b=>placed(b,"gate")&&placed(b,"vault")&&P(b,"gate")<P(b,"vault")},
+      {must:true,  text:"「門番」を、公開サーバーより奥・大事なデータより手前に置く", why:"商品ページは誰でも見られるままに、注文データに触る前だけ本人を確かめる。門番をページの前に置くと、お客が入れなくなる。", test:b=>placed(b,"gate")&&placed(b,"web")&&placed(b,"vault")&&P(b,"web")<P(b,"gate")&&P(b,"gate")<P(b,"vault")},
       {must:false, text:"「封印」を、大事なデータの直前に置く", why:"万一たどり着かれても、中身を見られないようにする。", test:b=>placed(b,"seal")&&placed(b,"vault")&&P(b,"seal")===P(b,"vault")-1},
       {must:false, text:"見張り記録を置く", why:"お店は狙われやすい。記録があれば、異変に気づける。", test:b=>placed(b,"log")},
-      {must:false, text:"「控え」を、大事なデータより奥に置く", why:"控えは、本体とは別の場所に置いてこそ意味がある。", test:b=>placed(b,"copy")&&placed(b,"vault")&&P(b,"copy")>P(b,"vault")}
+      {must:false, text:"「控え」を、大事なデータより奥に置く", why:"控えは、本体とは別の場所に置いてこそ意味がある。本体より奥なら、本体と一緒にやられにくい。", test:b=>placed(b,"copy")&&placed(b,"vault")&&P(b,"copy")>P(b,"vault")}
     ]
   },
   {
     id:"m5", title:"ミッション5 ― 離れた拠点と安全につなごう",
-    brief:"離れた拠点から、社内の道具を使いたい。外の通り道は使わず、<b>専用通路</b>でつなぐこと。公開はしない。",
-    hand:["inside","line","gate","fw","vault","log","web"], budget:12, stars3:1,
+    brief:"離れた拠点から、社内の道具を使いたい。外の通り道は使わず、<b>専用通路</b>でつなぐこと。公開はしない。社内の<b>大事なデータは、道具より奥</b>に置くこと。",
+    hand:["inside","line","gate","fw","vault","log","copy","web"], budget:14, stars3:1,
     rules:[
       {must:true,  text:"社内サーバーを置く", why:"使う道具そのものが要る。", test:b=>placed(b,"inside")},
+      {must:true,  text:"大事なデータを置く", why:"守る対象そのもの。置き忘れると、構成として完成しない。", test:b=>placed(b,"vault")},
       {must:true,  text:"専用通路を、一番手前（1）に置く", why:"拠点との接続は、構成の一番外側が入口になる。外の通り道を使わないのが、この通路の意味。", test:b=>P(b,"line")===0},
       {must:true,  text:"公開サーバーは置かない", why:"拠点との接続に、外に見せる置き場は要らない。入口が増えるだけ。", test:b=>!placed(b,"web")},
+      {must:true,  text:"「仕切り」を、専用通路と社内サーバーの間に置く", why:"専用通路だから安全、ではない。通路の先にも区切りは要る。「閉域なら安全」は、実務で一番ありがちな誤解。", test:b=>placed(b,"fw")&&placed(b,"line")&&placed(b,"inside")&&P(b,"fw")>P(b,"line")&&P(b,"fw")<P(b,"inside")},
       {must:true,  text:"「門番」を、社内サーバーの手前に置く", why:"専用通路の先でも、使う人が本人かどうかは確かめる。", test:b=>placed(b,"gate")&&placed(b,"inside")&&P(b,"gate")<P(b,"inside")},
       {must:true,  text:"大事なデータは、社内サーバーより奥に置く", why:"道具よりも中身が大事。データはさらに奥へ。", test:b=>placed(b,"vault")&&placed(b,"inside")&&P(b,"vault")>P(b,"inside")},
-      {must:false, text:"「仕切り」を、専用通路と社内サーバーの間に置く", why:"通路の先にも区切りを入れると、守りが二重になる。", test:b=>placed(b,"fw")&&placed(b,"line")&&placed(b,"inside")&&P(b,"fw")>P(b,"line")&&P(b,"fw")<P(b,"inside")},
-      {must:false, text:"見張り記録を置く", why:"拠点からの利用こそ、記録で確かめる。", test:b=>placed(b,"log")}
+      {must:false, text:"見張り記録を置く", why:"拠点からの利用こそ、記録で確かめる。", test:b=>placed(b,"log")},
+      {must:false, text:"控えを、社内サーバーより奥に置く", why:"壊れても戻せる控えは、道具と同じ場所に置かない。", test:b=>placed(b,"copy")&&placed(b,"inside")&&P(b,"copy")>P(b,"inside")}
     ]
   }
 ];
@@ -555,7 +561,7 @@ $("#btn-judge").addEventListener("click", judge);
 "use strict";
 /* ============ INTRO: function cards (AWS) & zone board ============ */
 const ICARDS = {
-  igw:  {name:"インターネットの入口", aws:"Internet Gateway", azure:"Azure NAT Gateway", gcp:"Cloud NAT",           cost:1, desc:"外とつながる唯一の入口"},
+  igw:  {name:"インターネットの入口", aws:"Internet Gateway", azure:"パブリックIP（既定のインターネット接続）", gcp:"既定のインターネットゲートウェイ",           cost:1, desc:"外とつながる唯一の入口"},
   alb:  {name:"振り分け",             aws:"Application Load Balancer", azure:"Azure Application Gateway", gcp:"Google Cloud Load Balancing",  cost:2, desc:"来た人を、空いている先へ振り分ける"},
   waf:  {name:"守りの壁",             aws:"AWS WAF", azure:"Azure Web Application Firewall", gcp:"Google Cloud Armor",                    cost:1, desc:"Webへの攻撃を入口で止める"},
   ec2:  {name:"仮想サーバー",         aws:"Amazon EC2", azure:"Azure Virtual Machines", gcp:"Compute Engine",                 cost:3, desc:"処理を行う汎用のサーバー"},
@@ -584,14 +590,14 @@ const IMISSIONS = [
   {
     id:"im1", title:"入門ミッション1 ― 土台を作ろう",
     fixture:"土台： 仮想ネットワーク（Amazon VPC）は用意済み。この中に層を作って配置する。",
-    brief:"会社の公開サイトと、その裏側の業務データを置く土台を作る。<b>公開する層／処理する層／データを守る層</b>に分け、全体にかける鍵と見張りも忘れずに。",
+    brief:"会社の公開サイトと、その裏側の業務データを置く土台を作る。<b>公開する層／処理する層／データを守る層</b>に分け、全体にかける権限の管理と見張りも忘れずに。",
     zones:[
       {id:"pub",  name:"公開する層",     slots:3},
       {id:"app",  name:"処理する層",     slots:2},
       {id:"data", name:"データを守る層", slots:2},
       {id:"all",  name:"全体にかける",   slots:3}
     ],
-    hand:["igw","alb","waf","ec2","rds","s3","iam","watch","dns"], budget:14, stars3:1,
+    hand:["igw","alb","waf","ec2","rds","s3","iam","watch","dns","trail"], budget:14, stars3:1,
     rules:[
       {must:true,  text:"インターネットの入口は「公開する層」に置く", why:"外との入口は、公開する層にだけ作る。", test:p=>p.igw==="pub"},
       {must:true,  text:"振り分けは「公開する層」に置く", why:"外から来た人を最初に受けるのは、公開する層の振り分け。", test:p=>p.alb==="pub"},
@@ -601,35 +607,36 @@ const IMISSIONS = [
       {must:true,  text:"ファイル置き場は「データを守る層」に置く", why:"ファイルもデータの一種。守る層に置く。", test:p=>p.s3==="data"},
       {must:true,  text:"権限の管理は「全体にかける」に置く", why:"権限の管理は層ごとではなく、環境全体にかけるもの。", test:p=>p.iam==="all"},
       {must:true,  text:"見張りは「全体にかける」に置く", why:"見張りの対象は全体。層の中に閉じ込めない。", test:p=>p.watch==="all"},
-      {must:false, text:"名前解決を「全体にかける」に置く", why:"名前解決は環境全体の案内役。置けると公開が安定する。", test:p=>p.dns==="all"}
+      {must:false, text:"名前解決を「全体にかける」に置く", why:"名前解決は環境全体の案内役。置けると公開が安定する。", test:p=>p.dns==="all"},
+      {must:false, text:"証跡の記録を「全体にかける」に置く", why:"誰が何をしたかの記録は、土台のうちに仕込むもの。", test:p=>p.trail==="all"}
     ]
   },
   {
     id:"im2", title:"入門ミッション2 ― 閉域でつなごう",
     fixture:"社内ネットワーク（固定）は、すでに左側にあるものとして考える。インターネットは経由しない。",
-    brief:"社内システムとクラウドを、<b>外のインターネットを通さずに</b>つなぐ。公開のための入口は作らないこと。",
+    brief:"社内システムとクラウドを、<b>外のインターネットを通さずに</b>つなぐ。公開のための入口は作らないこと。クラウドの置き場（ファイル置き場）のような<b>クラウドのサービスにも、ネットを通さず閉域のまま</b>つなぐこと。",
     zones:[
       {id:"link",  name:"つなぐ道",       slots:2},
       {id:"cloud", name:"クラウドの内側", slots:3},
       {id:"data",   name:"データを守る層", slots:2},
       {id:"all",    name:"全体にかける",   slots:2}
     ],
-    hand:["dx","plink","ec2","rds","iam","trail","igw","alb"], budget:14, stars3:1,
+    hand:["dx","plink","ec2","rds","iam","trail","backup","igw"], budget:15, stars3:1,
     rules:[
       {must:true,  text:"専用線は「つなぐ道」に置く", why:"社内とクラウドを結ぶ専用線が、閉域の本体。", test:p=>p.dx==="link"},
       {must:true,  text:"インターネットの入口は置かない", why:"閉域なのに外の入口を開けると、閉域の意味がなくなる。", test:p=>!p.igw},
-      {must:true,  text:"公開向けの振り分けは置かない", why:"外から受ける前提の部品は、閉域の構成には要らない。", test:p=>!p.alb},
-      {must:true,  text:"閉域の接続口は「クラウドの内側」に置く", why:"専用線の先で、閉域のままサービスへつなぐ口。", test:p=>p.plink==="cloud"},
+      {must:true,  text:"閉域の接続口は「クラウドの内側」に置く", why:"専用線は「線」、閉域の接続口は「サービスの入口」。線の先で、閉域のままクラウドのサービスへつなぐ口がこれ。", test:p=>p.plink==="cloud"},
       {must:true,  text:"仮想サーバーは「クラウドの内側」に置く", why:"処理はクラウドの内側で。外には出さない。", test:p=>p.ec2==="cloud"},
       {must:true,  text:"データベースは「データを守る層」に置く", why:"閉域でも、データはさらに奥の層へ。", test:p=>p.rds==="data"},
       {must:true,  text:"権限の管理は「全体にかける」に置く", why:"閉域でも「誰が使えるか」の管理は全体にかける。", test:p=>p.iam==="all"},
-      {must:false, text:"証跡の記録を「全体にかける」に置く", why:"閉域こそ「誰が何をしたか」の証跡が効く。", test:p=>p.trail==="all"}
+      {must:false, text:"証跡の記録を「全体にかける」に置く", why:"閉域こそ「誰が何をしたか」の証跡が効く。", test:p=>p.trail==="all"},
+      {must:false, text:"バックアップを「データを守る層」に置く", why:"閉域でも、壊れても戻せる備えは要る。", test:p=>p.backup==="data"}
     ]
   },
   {
     id:"im3", title:"入門ミッション3 ― ゼロトラストで守ろう",
     fixture:"前提： 信用できる「内側」は存在しない。すべてのアクセスを、毎回確かめる。",
-    brief:"拠点も人もバラバラな会社で、社内システムへ安全にアクセスさせたい。<b>「中に入れば安全」という考え方は捨てる</b>こと。毎回、本人と端末を確かめてから、必要なアプリにだけ通す。",
+    brief:"拠点も人もバラバラな会社で、社内システムへ安全にアクセスさせたい。<b>「中に入れば安全」という考え方は捨てる</b>こと。毎回、本人と端末を確かめてから、必要なアプリにだけ通す。<b>サーバー側に入口は作らない</b>（外からの窓口は、検証つき接続が担う）。",
     zones:[
       {id:"verify", name:"本人と端末の確認", slots:2},
       {id:"apps",   name:"アプリとデータ",   slots:3},
@@ -651,28 +658,27 @@ const IMISSIONS = [
   },
   {
     id:"im4", title:"入門ミッション4 ― 運用を整えよう",
-    fixture:"前提： 土台（ミッション1の構成）は構築済み。ここでは「作った後」の守りを整える。",
-    brief:"作って終わりではない。守りが効いているかを見張り、操作の証跡を残し、壊れても戻せるようにする。<b>運用の3点セット</b>を整えること。入口を増やすような真似はしない。",
+    fixture:"前提： 土台（ミッション1の構成）は構築済みで、関係する部品は盤面に固定表示されている。ここでは「作った後」の守りを足す。",
+    brief:"作って終わりではない。操作の<b>証跡</b>を残し、壊れても<b>戻せる備え</b>を足すこと（見張りは土台にすでにある）。入口を増やすような真似はしない。",
+    fixed:{rds:"data", watch:"all", iam:"all"},
     zones:[
-      {id:"data", name:"データを守る層", slots:2},
+      {id:"data", name:"データを守る層", slots:3},
       {id:"all",  name:"全体にかける",   slots:4}
     ],
-    hand:["watch","trail","backup","iam","rds","dns","igw","alb"], budget:9, stars3:1,
+    hand:["trail","backup","dns","s3","igw","alb"], budget:9, stars3:1,
     rules:[
-      {must:true,  text:"データベースは「データを守る層」に置く", why:"守る対象の本体。運用の部品は、この周りに整える。", test:p=>p.rds==="data"},
-      {must:true,  text:"バックアップは「データを守る層」に置く", why:"控えは、守るデータと同じ層で管理する。壊れても戻せるのが、運用の土台。", test:p=>p.backup==="data"},
-      {must:true,  text:"見張りは「全体にかける」に置く", why:"状態の見張りは、環境全体が対象。", test:p=>p.watch==="all"},
+      {must:true,  text:"バックアップは「データを守る層」に置く", why:"控えは、守るデータ（固定表示のデータベース）と同じ層で管理する。壊れても戻せるのが、運用の土台。", test:p=>p.backup==="data"},
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"誰が何をしたかは、全体を通して残す。", test:p=>p.trail==="all"},
-      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"運用の権限も、全体で厳密に管理する。", test:p=>p.iam==="all"},
-      {must:true,  text:"インターネットの入口は置かない", why:"運用の整備で、新しい入口を増やさない。入口は構築時の設計のまま。", test:p=>!p.igw},
-      {must:true,  text:"振り分けは置かない", why:"振り分けは公開のための部品。運用の3点セットには含まれない。", test:p=>!p.alb},
-      {must:false, text:"名前解決を「全体にかける」に置く", why:"案内役まで揃うと、公開の安定さが上がる。", test:p=>p.dns==="all"}
+      {must:true,  text:"インターネットの入口は追加しない", why:"運用の整備で、新しい入口を増やさない。入口は構築時の設計のまま。", test:p=>!p.igw},
+      {must:true,  text:"振り分けは追加しない", why:"振り分けも、構築時の設計のまま増やさない。運用の整備は、守りを足す仕事。", test:p=>!p.alb},
+      {must:false, text:"名前解決を「全体にかける」に置く", why:"案内役まで揃うと、公開の安定さが上がる。", test:p=>p.dns==="all"},
+      {must:false, text:"ファイル置き場を「データを守る層」に置く", why:"古いデータの置き場も、守る層でまとめて面倒を見る。", test:p=>p.s3==="data"}
     ]
   },
   {
     id:"ec1", title:"別線ミッション ― ECサイトを立ち上げよう",
     fixture:"別線： ECサイト構築。お店なので「公開する」が前提。ただし決済とデータの守り方は別格。",
-    brief:"ネットのお店を開く。商品を見せて、注文を受けて、決済までつなぐ。<b>売るための速さ</b>と、<b>お金とデータの守り</b>を両立させること。",
+    brief:"ネットのお店を開く。商品を見せて、注文を受けて、決済までつなぐ。<b>売るための速さ</b>と、<b>お金とデータの守り</b>を両立させること。注文はデータベースへ、<b>カートや閲覧履歴のような大量の軽いデータは柔軟なデータベース</b>へ分ける。決済は外部の専門サービスに任せ、<b>カード情報は自前で持たない</b>こと。",
     zones:[
       {id:"front", name:"お店の表側",     slots:3},
       {id:"work",  name:"処理する層",     slots:3},
@@ -697,24 +703,22 @@ const IMISSIONS = [
   },
   {
     id:"ec2", title:"別線ミッション2 ― お店を守りながら育てよう",
-    fixture:"別線： 開店済みのお店（別線ミッションの続き）。売る仕組みはあるので、ここでは守りと運用を足す。",
+    fixture:"別線： 開店済みのお店（別線ミッションの続き）。売る仕組みは盤面に固定表示されている。ここでは守りと運用を足す。",
     brief:"お店が開いて、注文が増えてきた。売るための速さは保ったまま、<b>守りと運用</b>を足すこと。決済の鉄則（カード情報は自前で持たない）は引き続き守る。",
+    fixed:{cdn:"front", waf:"front", sqs:"work", pay:"work", rds:"data"},
     zones:[
       {id:"front", name:"お店の表側",     slots:3},
       {id:"work",  name:"処理する層",     slots:3},
       {id:"data",  name:"データを守る層", slots:2},
-      {id:"all",   name:"全体にかける",   slots:2}
+      {id:"all",   name:"全体にかける",   slots:3}
     ],
-    hand:["cdn","waf","sqs","pay","backup","trail","watch","dx"], budget:10, stars3:1,
+    hand:["backup","trail","watch","iam","dx"], budget:14, stars3:1,
     rules:[
-      {must:true,  text:"配信の高速化は「お店の表側」に置く", why:"お店の速さは売上の土台。守りを足しても、速さは落とさない。", test:p=>p.cdn==="front"},
-      {must:true,  text:"守りの壁は「お店の表側」に置く", why:"注文が増えるほど、攻撃も増える。壁は表側で止める。", test:p=>p.waf==="front"},
-      {must:true,  text:"順番待ちの列は「処理する層」に置く", why:"セールの殺到に備える列は、処理の側に置く。", test:p=>p.sqs==="work"},
-      {must:true,  text:"決済の外部連携は「処理する層」に置く", why:"決済は外部の専門サービスへ。カード情報は自前で持たない鉄則は不変。", test:p=>p.pay==="work"},
-      {must:true,  text:"バックアップは「データを守る層」に置く", why:"注文データは、壊れても戻せるようにする。お店の信用そのもの。", test:p=>p.backup==="data"},
+      {must:true,  text:"バックアップは「データを守る層」に置く", why:"守る対象は、固定表示されている注文データベース。壊れても戻せるようにするのが、お店の信用そのもの。", test:p=>p.backup==="data"},
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"注文や決済の操作は、後から追えるように残す。", test:p=>p.trail==="all"},
+      {must:true,  text:"見張りは「全体にかける」に置く", why:"売上と異常の両方を見張るのが、お店の運用の要。", test:p=>p.watch==="all"},
       {must:true,  text:"専用線は置かない", why:"世界中のお客に開く店に、専用線は要らない。", test:p=>!p.dx},
-      {must:false, text:"見張りを「全体にかける」に置く", why:"売上と異常の両方を見張るのが、お店の運用。", test:p=>p.watch==="all"}
+      {must:false, text:"権限の管理を「全体にかける」に置く", why:"お店が育つほど、運営権限の管理が効いてくる。", test:p=>p.iam==="all"}
     ]
   }
 ];
@@ -743,7 +747,7 @@ function renderISelect(){
   });
 }
 function startIMission(i){
-  icur = i; iplace = {}; isel = null;
+  icur = i; iplace = Object.assign({}, IMISSIONS[i].fixed || {}); isel = null;
   const m = IMISSIONS[icur];
   $("#iplay-title").textContent = m.title;
   $("#iplay-brief").innerHTML = m.brief;
@@ -768,10 +772,11 @@ function renderIPlay(){
     slots.className = "zslots";
     const inZone = Object.keys(iplace).filter(id=> iplace[id]===z.id);
     inZone.forEach(id=>{
+      const isFixed = !!(m.fixed && id in m.fixed);
       const slot = document.createElement("div");
-      slot.className = "slot filled";
-      slot.innerHTML = icardHTML(id);
-      slot.addEventListener("click", ()=>{ delete iplace[id]; isel=null; renderIPlay(); });
+      slot.className = "slot filled" + (isFixed? " fixed":"");
+      slot.innerHTML = icardHTML(id) + (isFixed? `<div class="fx">構築済み（固定）</div>`:"");
+      if(!isFixed) slot.addEventListener("click", ()=>{ delete iplace[id]; isel=null; renderIPlay(); });
       slots.appendChild(slot);
     });
     for(let k=inZone.length; k<z.slots; k++){
@@ -849,7 +854,7 @@ $("#btn-ed-back").addEventListener("click", ()=> show("scr-mode"));
 $("#btn-mode-title").addEventListener("click", ()=> show("scr-title"));
 $("#btn-iselect-back").addEventListener("click", ()=> openEdition("intro"));
 $("#btn-iplay-back").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
-$("#btn-ireset").addEventListener("click", ()=>{ iplace={}; isel=null; $("#iresult").className=""; $("#iresult").innerHTML=""; renderIPlay(); });
+$("#btn-ireset").addEventListener("click", ()=>{ iplace=Object.assign({}, IMISSIONS[icur].fixed || {}); isel=null; $("#iresult").className=""; $("#iresult").innerHTML=""; renderIPlay(); });
 $("#btn-ijudge").addEventListener("click", ijudge);
 </script>
 <script>
@@ -1223,14 +1228,14 @@ $("#btn-hback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); 
 const LABS = [
   {
     id:"lab1", title:"研鑽編 シナリオ1 ― 公開サイトの改ざん",
-    brief:"朝、出社すると会社の公開サイトのトップページが書き換えられていた。下の図が、事故の起きた構成（指定構成）。<b>赤い丸は、管理用の入口がネット側に開いたまま</b>になっているところ。",
+    brief:"朝、出社すると会社の公開サイトのトップページが書き換えられていた。下の図が、事故の起きた構成（指定構成）。",
     nodes:[
       {id:"net", label:"ネット", x:34, y:150, net:true},
       {id:"cdn", label:"配信", x:112, y:150},
       {id:"alb", label:"振分", x:192, y:150},
       {id:"ec2", label:"サーバ", x:272, y:150},
       {id:"rds", label:"DB", x:272, y:248},
-      {id:"mgmt", label:"管理", x:112, y:52, weak:true}
+      {id:"mgmt", label:"管理", x:112, y:52}
     ],
     edges:[["net","cdn"],["cdn","alb"],["alb","ec2"],["ec2","rds"],["net","mgmt"],["mgmt","ec2"]],
     phases:[
@@ -1248,6 +1253,7 @@ const LABS = [
         options:[
           {t:"サーバーをネットワークから切り離す", kind:"must", why:"侵入されたサーバーは、まず切り離す。それ以上触らせないのが封じ込めの基本。"},
           {t:"管理用の入口を、ネット側から閉じる", kind:"must", why:"侵入の入口が開いたままでは、切り離しても別の経路から戻ってこられる。"},
+          {t:"サーバーの写し（スナップショット）を取って保存する", svc:"backup", kind:"good", why:"証拠保全の基本。後で原因を調べるための材料は、直したり消したりする前に残す。"},
           {t:"配信のキャッシュを消す", svc:"cdn", kind:"good", why:"改ざんされたページが、配信のキャッシュから出続けるのを止める。"},
           {t:"サイト全体を無期限に閉鎖する", kind:"bad", why:"過剰な対応。切り離しと入口の封鎖で足りる。事業を止め続ける必要はない。"},
           {t:"データベースを初期化する", kind:"bad", fatal:true, why:"DBは無事だと分かっている。初期化は、無事なデータまで消す致命的な手。"}
@@ -1264,7 +1270,7 @@ const LABS = [
         prompt:"二度と起こさないために、何をする？（必要なものを全部）",
         options:[
           {t:"管理は、本人確認を通した経路だけに絞る", svc:"idc", kind:"must", why:"管理の入口そのものの守り方を変えるのが、再発防止の本体。"},
-          {t:"汚染されたサーバーは、きれいな状態から作り直す", kind:"good", why:"侵入されたサーバーは、中身を完全には信用できない。作り直しが確実。"},
+          {t:"汚染されたサーバーは、きれいな状態から作り直す", kind:"must", why:"侵入されたサーバーには、裏口が残っている前提で考える。「直しただけ」で終わらせないのが実務の型。"},
           {t:"証跡の記録と見張りを有効にする", svc:"trail", kind:"good", why:"次に起きたとき、すぐ気づいて追えるようにする。"},
           {t:"管理パスワードを複雑にする", kind:"flat", why:"総当たりへの備えとしては弱い。入口の絞り込みが先。"}
         ]}
@@ -1286,14 +1292,15 @@ const LABS = [
         options:[
           {t:"設定の変更履歴を見る", svc:"trail", kind:"must", fact:"昨日夕方、手作業の設定変更で公開がオンになっていた", why:"いつ・誰が・何を変えたかは、変更履歴が教えてくれる。"},
           {t:"アクセスログで、外部からのアクセスを確認する", svc:"watch", kind:"must", fact:"外部からのアクセスが3件あった（中身を見られた可能性がある）", why:"「見られる状態だった」と「実際に見られた」は別。影響の大きさが変わる。"},
+          {t:"公開設定を、すぐオフにする", kind:"must", fact:"公開は止まった。設定の変更履歴とアクセスログは、消えずに残っている", why:"漏れている最中は、調べ終わるのを待たない。まず止める。履歴やログは消えないので、調査はこの後でできる。"},
           {t:"置き場の中身を、全部消す", kind:"bad", fatal:true, why:"消すと、影響範囲の確認も証拠も消える。業務データそのものも失われる。"},
           {t:"通報者に、見つけた経緯を詳しく聞く", kind:"flat", why:"いつから気づいたかは参考になるが、まず記録で確かめるのが先。"}
         ]},
       { name:"封じ込め", pick:"multi",
         prompt:"被害を広げないために、何をする？（必要なものを全部）",
         options:[
-          {t:"公開設定を、すぐオフにする", kind:"must", why:"誰でも見られる状態を、今すぐ止める。これが封じ込め。"},
-          {t:"影響範囲の洗い出しを始める", kind:"good", why:"何が置かれていて、誰に見られた可能性があるか。報告と次の手に必要になる。"},
+          {t:"影響範囲の洗い出しを始める", kind:"must", why:"何が置かれていて、誰に見られた可能性があるか。報告と次の手に必要になる。"},
+          {t:"見られた可能性のある相手へ、連絡の準備をする", kind:"good", why:"個人情報などが含まれていれば、利用者や関係機関への連絡が必要になる。洗い出しと並行して進める。"},
           {t:"置き場ごと削除する", kind:"bad", fatal:true, why:"中身は業務データ。消すのは封じ込めではなく、データの破壊。"},
           {t:"様子を見る（週明けに対応する）", kind:"bad", why:"公開されたまま放置する時間だけ、被害が広がる。"}
         ]},
@@ -1316,29 +1323,31 @@ const LABS = [
   },
   {
     id:"lab3", title:"研鑽編 シナリオ3 ― 強い鍵の漏洩",
-    brief:"強い権限を持つ「鍵」が、公開された置き場に置かれていた形跡がある、と連絡が入った。下の図が指定構成。<b>赤い丸は、サーバーに持たせていた強い鍵</b>。この鍵があれば、ほぼ何でもできてしまう。",
+    brief:"強い権限を持つ「鍵」が、外部で悪用された形跡がある、と連絡が入った。下の図が指定構成。<b>赤い丸は、サーバーに持たせていた強い鍵</b>。この鍵があれば、ほぼ何でもできてしまう。",
     nodes:[
       {id:"corp", label:"社内", x:34, y:150, net:true},
       {id:"ec2", label:"サーバ", x:122, y:150},
       {id:"rds", label:"DB", x:210, y:150},
       {id:"net", label:"ネット", x:286, y:150, net:true},
-      {id:"key", label:"強い鍵", x:122, y:52, weak:true}
+      {id:"key", label:"強い鍵", x:122, y:52, weak:true},
+      {id:"repo", label:"置き場", x:210, y:52}
     ],
-    edges:[["corp","ec2"],["ec2","rds"],["ec2","net"],["key","ec2"]],
+    edges:[["corp","ec2"],["ec2","rds"],["ec2","net"],["key","ec2"],["net","repo"],["repo","key"]],
     phases:[
       { name:"状況把握", pick:"multi", max:3,
         prompt:"まず何を確認する？（3つまで）",
         options:[
-          {t:"証跡の記録で、鍵の使用履歴を見る", svc:"trail", kind:"must", fact:"鍵は、外部のアドレスからも使われていた", why:"漏れた鍵が「使われたかどうか」で、事故の大きさが決まる。"},
+          {t:"証跡の記録で、鍵の使用履歴を見る", svc:"trail", kind:"must", fact:"鍵は、外部のアドレスからも使われていた。さらに、鍵のコピーが公開された置き場に残っていた", why:"漏れた鍵が「使われたかどうか」で、事故の大きさが決まる。"},
+          {t:"鍵を無効化する（消すのではなく）", kind:"must", fact:"鍵は無効化した。証跡には、この鍵の使用履歴が残っている", why:"漏れた鍵は、調べている間も有効なままにしない。無効化なら、履歴を追う手がかりが残る。"},
           {t:"鍵で触れる範囲を棚卸しする", svc:"iam", kind:"good", fact:"この鍵は、ほぼ全ての操作ができる強い権限だった", why:"強い鍵ほど、影響範囲の把握が先。"},
-          {t:"鍵を、すぐ消してしまう", kind:"bad", why:"消すのは封じ込めの手。先に使用履歴を保全しないと、被害範囲が追えなくなる。"},
+          {t:"鍵を、すぐ消してしまう", kind:"bad", why:"消すのと無効化は違う。消してしまうと、どの鍵が何をしたかの対応付けが追いにくくなる。止めるなら、まず無効化。"},
           {t:"サーバーを全部止める", kind:"bad", why:"過剰な対応。鍵の問題に、全面停止は要らない。"}
         ]},
       { name:"封じ込め", pick:"multi",
         prompt:"被害を広げないために、何をする？（必要なものを全部）",
         options:[
-          {t:"鍵を無効化する", kind:"must", why:"漏れた鍵は、まず使えなくする。これが封じ込めの本体。"},
           {t:"公開された置き場を閉じる", kind:"must", why:"漏れた場所が開いたままでは、別の情報も出続ける。"},
+          {t:"漏れた鍵で作られた、新しい鍵や利用者がないか確かめる", svc:"iam", kind:"good", why:"強い鍵があれば、攻撃者は居座るための別の鍵や利用者を作れる。それも探して止める。"},
           {t:"新しい鍵を、最小限の権限で発行し直す", svc:"iam", kind:"good", why:"業務を止めないために、代わりの鍵は「必要なだけ」の権限で。"},
           {t:"関係しそうなパスワードを、全部変える", kind:"flat", why:"関係のないものまで変える必要はない。範囲は履歴で確かめてから。"}
         ]},
@@ -1352,7 +1361,7 @@ const LABS = [
       { name:"恒久対策", pick:"multi",
         prompt:"二度と起こさないために、何をする？（必要なものを全部）",
         options:[
-          {t:"鍵は短期のものにして、本人確認と結びつける", svc:"idc", kind:"must", why:"長く使える強い鍵を持たせない。使うたびに、本人と結びついた短い鍵へ。"},
+          {t:"サーバーには鍵を持たせず、役割（ロール）で一時的な権限を渡す", svc:"iam", kind:"must", why:"サーバーが使う権限は、置きっぱなしの鍵ではなく、必要なときに役割として一時的に渡す。それが実務の型。本人確認と結びつけるのは「人」の認証の話。"},
           {t:"権限は、必要最小限に分ける", svc:"iam", kind:"good", why:"1つの鍵で何でもできる状態をなくす。"},
           {t:"鍵が置き場に置かれたら、自動で検知する", svc:"watch", kind:"good", why:"人の目だけに頼らず、仕組みで見つける。"},
           {t:"鍵を、もっと複雑な文字列にする", kind:"flat", why:"問題は文字列の強さではなく、置き場所と権限の強さ。"}
@@ -1374,7 +1383,7 @@ const LABS = [
       { name:"状況把握", pick:"multi", max:3,
         prompt:"まず何を確認する？（3つまで）",
         options:[
-          {t:"影響を受けるサーバーを棚卸しする", kind:"must", fact:"対象は、公開サーバー2台だった", why:"弱点のある部品が、どこに入っているか。範囲が分からないと手が打てない。"},
+          {t:"影響を受けるサーバーを棚卸しする", kind:"must", fact:"対象は、公開サーバー2台だった。この部品は、2年前の版のままになっていた", why:"弱点のある部品が、どこに入っているか。範囲が分からないと手が打てない。"},
           {t:"弱点の内容と、攻撃の有無を確認する", svc:"watch", kind:"must", fact:"攻撃はまだ確認されていない。ただし攻撃の方法は公開済み", why:"「まだ攻撃されていない」と「急がなくてよい」は違う。方法が公開済みなら、時間の問題。"},
           {t:"全部のサーバーを、すぐ止める", kind:"bad", why:"過剰な対応。対象は棚卸しで絞れる。事業を止める前にやることがある。"},
           {t:"部品の提供元の、次の発表を待つ", kind:"bad", why:"様子見は、攻撃方法が公開された状況では通用しない。"}
@@ -1382,15 +1391,16 @@ const LABS = [
       { name:"封じ込め", pick:"multi",
         prompt:"被害を広げないために、何をする？（必要なものを全部）",
         options:[
-          {t:"守りの壁で、攻撃のパターンを先に止める", svc:"waf", kind:"must", why:"部品の直し（更新）には時間がかかる。その間を、壁でふさぐ「応急のふさぎ方」が効く。"},
+          {t:"守りの壁を新たに置いて、攻撃のパターンを先に止める", svc:"waf", kind:"must", why:"部品の直し（更新）には時間がかかる。その間を、壁でふさぐ「応急のふさぎ方」が効く。"},
+          {t:"部品の更新を当てる", kind:"must", why:"弱点そのものを消すのが、脆弱性対応の本筋。壁は、その間の応急処置。"},
           {t:"対象サーバーを、一時的に切り離す", kind:"good", why:"壁で止めきれない場合の保険。公開を絞る覚悟が要る場面もある。"},
-          {t:"サイトを閉鎖する", kind:"bad", why:"壁での応急対応ができる段階。閉鎖は最後の手段。"}
+          {t:"サイトを無期限に閉鎖する", kind:"bad", why:"壁での応急対応と更新ができる段階。無期限の閉鎖は過剰。"}
         ]},
       { name:"原因特定", pick:"one",
         prompt:"そもそも、なぜ弱点を抱えたままだったのか？（1つ）",
         options:[
           {t:"部品の更新が長く止まっていて、弱点のある版のままだった", kind:"must", why:"棚卸しと更新の滞りが、今回の根本。"},
-          {t:"設定ミスで、守りの壁が効いていなかった", kind:"bad", why:"壁は今回の応急対応で使えた。効いていなかった事実はない。"},
+          {t:"設定ミスで、守りの壁が効いていなかった", kind:"bad", why:"壁は今回、新たに置いて対応したもの。効いていなかったという話ではない。"},
           {t:"攻撃者が、未知の攻撃（ゼロデイ）を使った", kind:"bad", why:"今回は、公開済みの既知の弱点。未知の攻撃ではない。"}
         ]},
       { name:"恒久対策", pick:"multi",
@@ -1399,7 +1409,7 @@ const LABS = [
           {t:"部品の更新を、自動化／定期化する", kind:"must", why:"更新の滞りそのものを、仕組みでなくす。"},
           {t:"使っている部品の棚卸しを、仕組み化する", kind:"good", why:"「何が入っているか」が常時分かれば、次の発表にもすぐ動ける。"},
           {t:"弱点の知らせを受け取る窓口を決める", svc:"watch", kind:"good", why:"発表に気づくまでの時間が、対応の速さを決める。"},
-          {t:"サーバーを全部入れ替える", kind:"bad", why:"過剰な対応。問題は部品の更新であって、サーバーそのものではない。"}
+          {t:"サーバーを全部入れ替える", kind:"flat", why:"更新済みの土台で作り直すのは、正しい場面もあるやり方。ただし今回の本筋は、更新の仕組みを直すこと。"}
         ]}
     ]
   }
