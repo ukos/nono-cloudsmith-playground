@@ -161,6 +161,19 @@
   .hexcell.full polygon{fill:#12315f; stroke:#2b5ea7; stroke-width:2;}
   .hexcell.netn polygon{fill:#06203f; stroke:#39d5e8; stroke-dasharray:4 3;}
   .hexcell text{fill:#eaf4ff; font-size:10.5px; font-weight:700; text-anchor:middle; pointer-events:none;}
+  /* lab (incident response) */
+  .gnode.weak circle{stroke:#e5534b; stroke-width:3;}
+  .gnode.static{cursor:default;}
+  .facts{background:rgba(20,60,40,.55); border:2px solid #2f9e6e; border-radius:10px; padding:10px 14px; font-size:13.5px; line-height:1.7; margin-top:12px;}
+  .facts b{color:#9fe8c3;}
+  .lphase{font-size:15px; font-weight:800; margin:18px 0 4px; color:#ffd9a0;}
+  .lopt{white-space:normal; line-height:1.55; font-weight:600;}
+  .lopt .aws{display:block; font-size:11px; color:var(--muted); font-weight:400;}
+  .lopt.on{border-color:var(--amber); color:#ffd9a0; background:linear-gradient(180deg, #3a2c12, #241a08);}
+  #lresult{display:none; margin-top:16px; background:rgba(14,42,85,.92); border:2px solid var(--amber); border-radius:10px; padding:14px;}
+  #lresult.show{display:block;}
+  #lresult h3{margin:0 0 6px; font-size:18px;}
+  #lresult .rstars{color:var(--amber); font-size:20px; letter-spacing:.15em;}
 </style>
 </head>
 <body>
@@ -171,17 +184,17 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.9.1 — 開始ボタンを中央寄せに</p>
+    <p class="ver">CLOUDSMITH prototype v0.10 — 研鑽編（インシデント対応）を追加</p>
   </section>
 
   <!-- MODE SELECT -->
   <section id="scr-mode" class="screen">
     <h2>編を選ぶ</h2>
-    <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学びます。</p>
+    <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学び、実践編で「最適な構成」を組み立て、研鑽編で「事故への対応」を練習します。</p>
     <button class="btn primary" id="btn-mode-basics">基礎編 ― 概念カード</button>
     <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS／Azure／GCP）</button>
     <button class="btn primary" id="btn-mode-prac">実践編 ― グラフ盤面（AWS／Azure／GCP）</button>
-    <button class="btn" disabled>研鑽編 ― 準備中</button>
+    <button class="btn primary" id="btn-mode-lab">研鑽編 ― インシデント対応（AWS／Azure／GCP）</button>
     <button class="btn" id="btn-mode-title">タイトルへもどる</button>
   </section>
 
@@ -284,6 +297,27 @@
     <button class="btn" id="btn-hreset">やり直す</button>
     <button class="btn" id="btn-hback">盤面の選択へもどる</button>
     <div id="hresult"></div>
+  </section>
+
+  <!-- LAB SELECT -->
+  <section id="scr-lselect" class="screen">
+    <h2 id="lselect-title">研鑽編 ― インシデント対応</h2>
+    <p class="sub">指定された構成で事故が起きました。構成の引き継ぎはありません。状況把握 → 封じ込め → 原因特定 → 恒久対策の順に対応してください。証跡を消すような手は致命的です。</p>
+    <div id="lscenario-list"></div>
+    <button class="btn" id="btn-lselect-back">編の選択へもどる</button>
+  </section>
+
+  <!-- LAB PLAY -->
+  <section id="scr-lplay" class="screen">
+    <h2 id="lplay-title"></h2>
+    <div class="brief" id="lplay-brief"></div>
+    <div id="larch"></div>
+    <div id="lfacts"></div>
+    <div id="lphase"></div>
+    <button class="btn primary" id="btn-lnext">次へ進む</button>
+    <button class="btn" id="btn-lreset">最初から対応し直す</button>
+    <button class="btn" id="btn-lback">シナリオ選択へもどる</button>
+    <div id="lresult"></div>
   </section>
 
 </div>
@@ -720,13 +754,14 @@ function ijudge(){
 $("#btn-mode-basics").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
 function openEdition(target){
   editionTarget = target;
-  $("#edition-title").textContent = (target==="intro"? "入門編" : "実践編") + " ― クラウドを選ぶ";
+  $("#edition-title").textContent = (target==="intro"? "入門編" : target==="lab"? "研鑽編" : "実践編") + " ― クラウドを選ぶ";
   show("scr-edition");
 }
 function chooseCloud(c){
   cloud = c;
   try{ localStorage.setItem("cloudsmith-cloud-v1", c); }catch(e){}
   if(editionTarget==="intro"){ renderISelect(); show("scr-iselect"); }
+  else if(editionTarget==="lab"){ renderLSelect(); show("scr-lselect"); }
   else{ renderPrac(); show("scr-prac"); }
 }
 $("#btn-mode-intro").addEventListener("click", ()=> openEdition("intro"));
@@ -1024,6 +1059,232 @@ $("#btn-greset").addEventListener("click", ()=> startGraph(gscenIdx));
 $("#btn-hreset").addEventListener("click", startHex);
 $("#btn-gback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
 $("#btn-hback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
+</script>
+<script>
+"use strict";
+/* ============ LAB: incident response (specified architecture, no carry-over) ============ */
+/*LABCORE-BEGIN*/
+const LABS = [
+  {
+    id:"lab1", title:"研鑽編 シナリオ1 ― 公開サイトの改ざん",
+    brief:"朝、出社すると会社の公開サイトのトップページが書き換えられていた。下の図が、事故の起きた構成（指定構成）。<b>赤い丸は、管理用の入口がネット側に開いたまま</b>になっているところ。",
+    nodes:[
+      {id:"net", label:"ネット", x:34, y:150, net:true},
+      {id:"cdn", label:"配信", x:112, y:150},
+      {id:"alb", label:"振分", x:192, y:150},
+      {id:"ec2", label:"サーバ", x:272, y:150},
+      {id:"rds", label:"DB", x:272, y:248},
+      {id:"mgmt", label:"管理", x:112, y:52, weak:true}
+    ],
+    edges:[["net","cdn"],["cdn","alb"],["alb","ec2"],["ec2","rds"],["net","mgmt"],["mgmt","ec2"]],
+    phases:[
+      { name:"状況把握", pick:"multi", max:3,
+        prompt:"まず何を確認する？（3つまで）",
+        options:[
+          {t:"サーバーのアクセスログを見る", svc:"watch", kind:"must", fact:"深夜2時台に、管理用の入口から外のアドレスのログインが成功していた", why:"侵入の有無と時刻は、アクセスログが教えてくれる。最初に見るべき記録。"},
+          {t:"証跡の記録を見る", svc:"trail", kind:"good", fact:"設定変更の履歴に、不審な変更はなかった", why:"設定が書き換えられていないか、操作の記録で確かめる。"},
+          {t:"改ざんされたファイルを、すぐ消して元に戻す", kind:"bad", fatal:true, why:"直すのは後。先に消すと、侵入の証拠まで消えてしまい、原因が追えなくなる。"},
+          {t:"データベースの中身を確認する", kind:"flat", why:"DBに異常はなかった。無駄ではないが、今回の決定打ではない。"},
+          {t:"サーバーの電源を切る", kind:"bad", why:"電源を切るとメモリ上の証拠が消え、サービスも止まる。封じ込めの前にやる手ではない。"}
+        ]},
+      { name:"封じ込め", pick:"multi",
+        prompt:"被害を広げないために、何をする？（必要なものを全部）",
+        options:[
+          {t:"サーバーをネットワークから切り離す", kind:"must", why:"侵入されたサーバーは、まず切り離す。それ以上触らせないのが封じ込めの基本。"},
+          {t:"管理用の入口を、ネット側から閉じる", kind:"must", why:"侵入の入口が開いたままでは、切り離しても別の経路から戻ってこられる。"},
+          {t:"配信のキャッシュを消す", svc:"cdn", kind:"good", why:"改ざんされたページが、配信のキャッシュから出続けるのを止める。"},
+          {t:"サイト全体を無期限に閉鎖する", kind:"bad", why:"過剰な対応。切り離しと入口の封鎖で足りる。事業を止め続ける必要はない。"},
+          {t:"データベースを初期化する", kind:"bad", fatal:true, why:"DBは無事だと分かっている。初期化は、無事なデータまで消す致命的な手。"}
+        ]},
+      { name:"原因特定", pick:"one",
+        prompt:"ここまでの情報から、原因はどれだと思う？（1つ）",
+        options:[
+          {t:"管理用の入口がネットに開いていて、総当たりで侵入された", kind:"must", why:"アクセスログの記録（深夜・管理入口・外のアドレス）と一致する。"},
+          {t:"配信の設定ミスで、別のサイトが表示されていた", kind:"bad", why:"証跡の記録に、配信の設定変更はなかった。"},
+          {t:"データベースから情報が漏れて書き換えられた", kind:"bad", why:"DBに異常はなく、書き換えはサーバー側で起きている。"},
+          {t:"内部の人間の犯行", kind:"bad", why:"ログインは外のアドレスから。内部犯行を示す材料はない。"}
+        ]},
+      { name:"恒久対策", pick:"multi",
+        prompt:"二度と起こさないために、何をする？（必要なものを全部）",
+        options:[
+          {t:"管理は、本人確認を通した経路だけに絞る", svc:"idc", kind:"must", why:"管理の入口そのものの守り方を変えるのが、再発防止の本体。"},
+          {t:"汚染されたサーバーは、きれいな状態から作り直す", kind:"good", why:"侵入されたサーバーは、中身を完全には信用できない。作り直しが確実。"},
+          {t:"証跡の記録と見張りを有効にする", svc:"trail", kind:"good", why:"次に起きたとき、すぐ気づいて追えるようにする。"},
+          {t:"管理パスワードを複雑にする", kind:"flat", why:"総当たりへの備えとしては弱い。入口の絞り込みが先。"}
+        ]}
+    ]
+  },
+  {
+    id:"lab2", title:"研鑽編 シナリオ2 ― データ置き場の公開ミス",
+    brief:"「社内資料の置き場が、誰でも見られる状態になっている」という通報があった。下の図が指定構成。<b>赤い丸は、公開設定がオンになったままの置き場</b>。",
+    nodes:[
+      {id:"corp", label:"社内", x:34, y:150, net:true},
+      {id:"ec2", label:"サーバ", x:122, y:150},
+      {id:"s3", label:"置き場", x:210, y:150, weak:true},
+      {id:"net", label:"ネット", x:286, y:150, net:true}
+    ],
+    edges:[["corp","ec2"],["ec2","s3"],["s3","net"]],
+    phases:[
+      { name:"状況把握", pick:"multi", max:3,
+        prompt:"まず何を確認する？（3つまで）",
+        options:[
+          {t:"設定の変更履歴を見る", svc:"trail", kind:"must", fact:"昨日夕方、手作業の設定変更で公開がオンになっていた", why:"いつ・誰が・何を変えたかは、変更履歴が教えてくれる。"},
+          {t:"アクセスログで、外部からのアクセスを確認する", svc:"watch", kind:"must", fact:"外部からのアクセスが3件あった（中身を見られた可能性がある）", why:"「見られる状態だった」と「実際に見られた」は別。影響の大きさが変わる。"},
+          {t:"置き場の中身を、全部消す", kind:"bad", fatal:true, why:"消すと、影響範囲の確認も証拠も消える。業務データそのものも失われる。"},
+          {t:"通報者に、見つけた経緯を詳しく聞く", kind:"flat", why:"いつから気づいたかは参考になるが、まず記録で確かめるのが先。"}
+        ]},
+      { name:"封じ込め", pick:"multi",
+        prompt:"被害を広げないために、何をする？（必要なものを全部）",
+        options:[
+          {t:"公開設定を、すぐオフにする", kind:"must", why:"誰でも見られる状態を、今すぐ止める。これが封じ込め。"},
+          {t:"影響範囲の洗い出しを始める", kind:"good", why:"何が置かれていて、誰に見られた可能性があるか。報告と次の手に必要になる。"},
+          {t:"置き場ごと削除する", kind:"bad", fatal:true, why:"中身は業務データ。消すのは封じ込めではなく、データの破壊。"},
+          {t:"様子を見る（週明けに対応する）", kind:"bad", why:"公開されたまま放置する時間だけ、被害が広がる。"}
+        ]},
+      { name:"原因特定", pick:"one",
+        prompt:"ここまでの情報から、原因はどれだと思う？（1つ）",
+        options:[
+          {t:"手作業の設定変更で、公開がオンになっていた", kind:"must", why:"変更履歴の記録と一致する。"},
+          {t:"攻撃者が権限を奪って、公開に変えた", kind:"bad", why:"変更は、正規の担当者の操作として記録されている。"},
+          {t:"置き場の初期設定が、もともと公開だった", kind:"bad", why:"公開になったのは昨日の変更から。それ以前は閉じていた。"}
+        ]},
+      { name:"恒久対策", pick:"multi",
+        prompt:"二度と起こさないために、何をする？（必要なものを全部）",
+        options:[
+          {t:"公開設定を自動で検知して、知らせる／元に戻す仕組みを入れる", svc:"watch", kind:"must", why:"人の注意力だけに頼らない。再発を仕組みで止めるのが恒久対策。"},
+          {t:"設定変更には、承認を必須にする", svc:"iam", kind:"good", why:"危ない変更は、一人で完結させない。"},
+          {t:"操作できる人の権限を、必要最小限にする", svc:"iam", kind:"good", why:"触れる人が少ないほど、ミスの起きる場所も減る。"},
+          {t:"全員に注意喚起のメールを送る", kind:"flat", why:"注意喚起だけでは、同じミスはまた起きる。仕組み側の対策が本体。"}
+        ]}
+    ]
+  }
+];
+function labEvaluate(scen, picks){
+  let clear = true, fatalHit = false, goodAll = 0, goodGot = 0, badGot = 0;
+  const rows = [];
+  scen.phases.forEach((ph, pi)=>{
+    ph.options.forEach((op, oi)=>{
+      const picked = picks[pi].has(oi);
+      let st = null; /* ok | ng | ref | skip */
+      if(op.kind==="must"){ st = picked? "ok":"ng"; if(!picked) clear = false; }
+      else if(op.kind==="good"){ goodAll++; if(picked){ goodGot++; st="ok"; } else st="ng"; }
+      else if(op.kind==="bad"){ if(picked){ badGot++; st="ng"; if(op.fatal){ fatalHit = true; clear = false; } } else st="ok"; }
+      else if(op.kind==="flat"){ st = picked? "ref":"skip"; }
+      if(st!=="skip") rows.push({phase:ph.name, op, st, picked});
+    });
+  });
+  if(fatalHit) clear = false;
+  let stars = 0;
+  if(clear){
+    stars = (goodGot===goodAll && badGot===0)? 3 : (badGot===0 || (badGot===1 && goodGot===goodAll))? 2 : 1;
+  }
+  return {clear, stars, fatalHit, rows};
+}
+/*LABCORE-END*/
+let lcur = 0, lphase = 0, lpicks = [];
+function renderLSelect(){
+  $("#lselect-title").textContent = `研鑽編 ― インシデント対応（${CLOUD_LABEL[cloud]}）`;
+  const list = $("#lscenario-list");
+  list.innerHTML = "";
+  LABS.forEach((scen,i)=>{
+    const st = progress[scen.id] || 0;
+    const btn = document.createElement("button");
+    btn.className = "btn primary";
+    btn.innerHTML = `${scen.title}<span class="stars">${"★".repeat(st)}${"☆".repeat(3-st)}</span>`;
+    btn.addEventListener("click", ()=> startLab(i));
+    list.appendChild(btn);
+  });
+}
+function labArchSVG(scen){
+  const pos = {};
+  scen.nodes.forEach(n=> pos[n.id] = n);
+  let s = `<svg class="board" viewBox="0 0 320 300">`;
+  scen.edges.forEach(([a,b])=>{
+    const pa = pos[a], pb = pos[b];
+    if(pa && pb) s += `<line class="gedge" x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}"/>`;
+  });
+  scen.nodes.forEach(n=>{
+    s += `<g class="gnode static ${n.net? "netn":""} ${n.weak? "weak":""}"><circle cx="${n.x}" cy="${n.y}" r="25"/><text x="${n.x}" y="${n.y+4}">${n.label}</text></g>`;
+  });
+  return s + `</svg>`;
+}
+function startLab(i){
+  lcur = i; lphase = 0;
+  const scen = LABS[lcur];
+  lpicks = scen.phases.map(()=> new Set());
+  $("#lplay-title").textContent = scen.title + `（${CLOUD_LABEL[cloud]}編）`;
+  $("#lplay-brief").innerHTML = scen.brief;
+  $("#larch").innerHTML = labArchSVG(scen);
+  $("#lresult").className = ""; $("#lresult").innerHTML = "";
+  renderLPhase();
+  show("scr-lplay");
+}
+function labFacts(){
+  const scen = LABS[lcur], out = [];
+  scen.phases.forEach((ph, pi)=>{
+    if(pi >= lphase) return;
+    ph.options.forEach((op, oi)=>{ if(op.fact && lpicks[pi].has(oi)) out.push(op.fact); });
+  });
+  return out;
+}
+function renderLPhase(){
+  const scen = LABS[lcur], ph = scen.phases[lphase];
+  const facts = labFacts();
+  $("#lfacts").innerHTML = facts.length
+    ? `<div class="facts"><b>分かっていること</b><br>${facts.map(f=> "・"+f).join("<br>")}</div>` : "";
+  const w = $("#lphase");
+  let html = `<div class="lphase">第${lphase+1}段階 ― ${ph.name}</div><p class="sub">${ph.prompt}</p>`;
+  w.innerHTML = html;
+  ph.options.forEach((op, oi)=>{
+    const btn = document.createElement("button");
+    btn.className = "btn lopt" + (lpicks[lphase].has(oi)? " on":"");
+    btn.innerHTML = op.t + (op.svc && ICARDS[op.svc]? `<span class="aws">${ICARDS[op.svc].name}（${ICARDS[op.svc][cloud] || ICARDS[op.svc].aws}）</span>` : "");
+    btn.addEventListener("click", ()=>{
+      const set = lpicks[lphase];
+      if(ph.pick==="one"){ set.clear(); set.add(oi); }
+      else if(set.has(oi)){ set.delete(oi); }
+      else if(!ph.max || set.size < ph.max){ set.add(oi); }
+      renderLPhase();
+    });
+    w.appendChild(btn);
+  });
+  $("#btn-lnext").textContent = lphase === scen.phases.length-1? "判定する" : "次へ進む";
+}
+function labJudge(){
+  const scen = LABS[lcur];
+  const ev = labEvaluate(scen, lpicks);
+  if(ev.clear){
+    const prev = progress[scen.id] || 0;
+    if(ev.stars > prev){ progress[scen.id] = ev.stars; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }catch(e){} }
+  }
+  const box = $("#lresult");
+  let html = `<h3>${ev.clear? "対応完了！": "対応が不十分だった"}</h3>`;
+  if(ev.clear) html += `<div class="rstars">${"★".repeat(ev.stars)}${"☆".repeat(3-ev.stars)}</div>`;
+  if(ev.fatalHit) html += `<p class="sub" style="color:#ff9d94">証跡やデータを消す手を選んでしまった。事故対応では致命的になる。</p>`;
+  let lastPhase = "";
+  ev.rows.forEach(row=>{
+    if(row.phase !== lastPhase){ html += `<div class="lphase">${row.phase}</div>`; lastPhase = row.phase; }
+    const tag = row.op.kind==="must"? "必須" : row.op.kind==="good"? "加点" : row.op.kind==="bad"? (row.picked? "減点":"回避") : "参考";
+    html += `<div class="rule"><span class="mk ${row.st==="ok"? "ok": row.st==="ref"? "ok":"ng"}">${row.st==="ok"? "○": row.st==="ref"? "―":"×"}</span>${row.op.t}<span class="tag">${tag}</span><span class="why">${row.op.why}</span></div>`;
+  });
+  if(ev.clear && lcur < LABS.length-1)
+    html += `<button class="btn primary" id="btn-lnext-scen">次のシナリオへ</button>`;
+  if(ev.clear && lcur === LABS.length-1)
+    html += `<p class="sub" style="margin:10px 0 0">研鑽編の試作はここまで。おつかれさまでした。</p>`;
+  box.innerHTML = html;
+  box.className = "show";
+  const nb = $("#btn-lnext-scen");
+  if(nb) nb.addEventListener("click", ()=> startLab(lcur+1));
+  box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+$("#btn-mode-lab").addEventListener("click", ()=> openEdition("lab"));
+$("#btn-lselect-back").addEventListener("click", ()=> openEdition("lab"));
+$("#btn-lback").addEventListener("click", ()=>{ renderLSelect(); show("scr-lselect"); });
+$("#btn-lreset").addEventListener("click", ()=> startLab(lcur));
+$("#btn-lnext").addEventListener("click", ()=>{
+  if(lphase < LABS[lcur].phases.length-1){ lphase++; renderLPhase(); window.scrollTo({top:0, behavior:"smooth"}); }
+  else labJudge();
+});
 </script>
 </body>
 </html>
