@@ -185,7 +185,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.12.1 — 商標表記の調整</p>
+    <p class="ver">CLOUDSMITH prototype v0.13 — 外部レビューを受けた実践編の直し</p>
     <p class="ver" style="margin-top:6px">非公式の学習用ゲームです。登場するサービス名は各社の商標であり、各社との提携関係はありません。</p>
   </section>
 
@@ -271,6 +271,7 @@
   <section id="scr-gplay" class="screen">
     <h2 id="gplay-title"></h2>
     <div class="brief" id="gplay-brief"></div>
+    <p class="sub" style="margin-top:6px">※ 条件文の「→」は並びの目安で、線そのものに<b>向きはありません</b>（つながっていればよい）。</p>
     <p class="budget" id="gplay-budget"></p>
     <div class="rowbtns" style="margin-top:12px">
       <button class="btn on" id="btn-gmode-place">配置モード</button>
@@ -560,10 +561,10 @@ const ICARDS = {
   ec2:  {name:"仮想サーバー",         aws:"Amazon EC2", azure:"Azure Virtual Machines", gcp:"Compute Engine",                 cost:3, desc:"処理を行う汎用のサーバー"},
   rds:  {name:"データベース",         aws:"Amazon RDS", azure:"Azure SQL Database", gcp:"Cloud SQL",                 cost:3, desc:"業務データを守って置く"},
   s3:   {name:"ファイル置き場",       aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Google Cloud Storage",                  cost:1, desc:"ファイルや画像の置き場"},
-  iam:  {name:"鍵の管理",             aws:"AWS IAM", azure:"Azure RBAC", gcp:"Cloud IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
+  iam:  {name:"権限の管理",             aws:"AWS IAM", azure:"Azure RBAC", gcp:"Cloud IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
   watch:{name:"見張り",               aws:"Amazon CloudWatch", azure:"Azure Monitor", gcp:"Cloud Monitoring",          cost:1, desc:"状態を見張り、異常を知らせる"},
   dns:  {name:"名前解決",             aws:"Amazon Route 53", azure:"Azure DNS", gcp:"Cloud DNS",            cost:1, desc:"名前から行き先を引く"},
-  dx:   {name:"閉域接続",             aws:"AWS Direct Connect", azure:"Azure ExpressRoute", gcp:"Cloud Interconnect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
+  dx:   {name:"専用線",             aws:"AWS Direct Connect", azure:"Azure ExpressRoute", gcp:"Cloud Interconnect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
   plink:{name:"閉域の接続口",         aws:"AWS PrivateLink", azure:"Azure Private Link", gcp:"Private Service Connect",            cost:2, desc:"閉域のままサービスへつなぐ口"},
   trail:{name:"証跡の記録",           aws:"AWS CloudTrail", azure:"Azure Activity Log", gcp:"Cloud Audit Logs",             cost:1, desc:"誰が・何をしたかの記録"},
   idc:  {name:"本人確認の窓口",       aws:"AWS IAM Identity Center", azure:"Microsoft Entra ID", gcp:"Cloud Identity",    cost:2, desc:"使う人が本人かどうかを確かめる"},
@@ -598,7 +599,7 @@ const IMISSIONS = [
       {must:true,  text:"仮想サーバーは「処理する層」に置く", why:"実際の処理は、外に直接出ない層で行う。", test:p=>p.ec2==="app"},
       {must:true,  text:"データベースは「データを守る層」に置く", why:"業務データは最も奥の層へ。", test:p=>p.rds==="data"},
       {must:true,  text:"ファイル置き場は「データを守る層」に置く", why:"ファイルもデータの一種。守る層に置く。", test:p=>p.s3==="data"},
-      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"鍵の管理は層ごとではなく、環境全体にかけるもの。", test:p=>p.iam==="all"},
+      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"権限の管理は層ごとではなく、環境全体にかけるもの。", test:p=>p.iam==="all"},
       {must:true,  text:"見張りは「全体にかける」に置く", why:"見張りの対象は全体。層の中に閉じ込めない。", test:p=>p.watch==="all"},
       {must:false, text:"名前解決を「全体にかける」に置く", why:"名前解決は環境全体の案内役。置けると公開が安定する。", test:p=>p.dns==="all"}
     ]
@@ -615,13 +616,13 @@ const IMISSIONS = [
     ],
     hand:["dx","plink","ec2","rds","iam","trail","igw","alb"], budget:14, stars3:1,
     rules:[
-      {must:true,  text:"閉域接続は「つなぐ道」に置く", why:"社内とクラウドを結ぶ専用線が、閉域の本体。", test:p=>p.dx==="link"},
-      {must:true,  text:"インターネットの入口は作らない", why:"閉域なのに外の入口を開けると、閉域の意味がなくなる。", test:p=>!p.igw},
+      {must:true,  text:"専用線は「つなぐ道」に置く", why:"社内とクラウドを結ぶ専用線が、閉域の本体。", test:p=>p.dx==="link"},
+      {must:true,  text:"インターネットの入口は置かない", why:"閉域なのに外の入口を開けると、閉域の意味がなくなる。", test:p=>!p.igw},
       {must:true,  text:"公開向けの振り分けは置かない", why:"外から受ける前提の部品は、閉域の構成には要らない。", test:p=>!p.alb},
       {must:true,  text:"閉域の接続口は「クラウドの内側」に置く", why:"専用線の先で、閉域のままサービスへつなぐ口。", test:p=>p.plink==="cloud"},
       {must:true,  text:"仮想サーバーは「クラウドの内側」に置く", why:"処理はクラウドの内側で。外には出さない。", test:p=>p.ec2==="cloud"},
       {must:true,  text:"データベースは「データを守る層」に置く", why:"閉域でも、データはさらに奥の層へ。", test:p=>p.rds==="data"},
-      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"閉域でも「誰が使えるか」の管理は全体にかける。", test:p=>p.iam==="all"},
+      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"閉域でも「誰が使えるか」の管理は全体にかける。", test:p=>p.iam==="all"},
       {must:false, text:"証跡の記録を「全体にかける」に置く", why:"閉域こそ「誰が何をしたか」の証跡が効く。", test:p=>p.trail==="all"}
     ]
   },
@@ -638,11 +639,11 @@ const IMISSIONS = [
     rules:[
       {must:true,  text:"本人確認の窓口は「本人と端末の確認」に置く", why:"すべての入口で、まず「誰か」を確かめるのがゼロトラストの出発点。", test:p=>p.idc==="verify"},
       {must:true,  text:"検証つき接続は「本人と端末の確認」に置く", why:"本人と端末の両方を確かめてから、必要なアプリにだけつなぐ。場所では信用しない。", test:p=>p.ava==="verify"},
-      {must:true,  text:"閉域接続（専用線）は前提にしない", why:"専用線は「線の内側を信用する」発想。拠点がバラバラな働き方には合わない。", test:p=>!p.dx},
-      {must:true,  text:"インターネットの入口は作らない", why:"アプリをネットワークの入口に直接さらさない。アクセスは検証つき接続を通す。", test:p=>!p.igw},
+      {must:true,  text:"専用線は置かない", why:"専用線は「線の内側を信用する」発想。拠点がバラバラな働き方には合わない。", test:p=>!p.dx},
+      {must:true,  text:"インターネットの入口は置かない", why:"アプリをネットワークの入口に直接さらさない。アクセスは検証つき接続を通す。", test:p=>!p.igw},
       {must:true,  text:"仮想サーバーは「アプリとデータ」に置く", why:"アプリは、検証を通った人だけが届く場所に置く。", test:p=>p.ec2==="apps"},
       {must:true,  text:"データベースは「アプリとデータ」に置く", why:"データも同じく、検証なしでは届かない場所へ。", test:p=>p.rds==="apps"},
-      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"「何をしてよいか」の権限は、環境全体で細かく決める。", test:p=>p.iam==="all"},
+      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"「何をしてよいか」の権限は、環境全体で細かく決める。", test:p=>p.iam==="all"},
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"毎回確かめる仕組みは、記録があって初めて監査できる。", test:p=>p.trail==="all"},
       {must:false, text:"見張りを「全体にかける」に置く", why:"不審なアクセスの検知まで揃うと、守りが運用になる。", test:p=>p.watch==="all"},
       {must:false, text:"ファイル置き場を「アプリとデータ」に置く", why:"ファイルも、検証を通った人だけが届く場所へ。", test:p=>p.s3==="apps"}
@@ -662,8 +663,8 @@ const IMISSIONS = [
       {must:true,  text:"バックアップは「データを守る層」に置く", why:"控えは、守るデータと同じ層で管理する。壊れても戻せるのが、運用の土台。", test:p=>p.backup==="data"},
       {must:true,  text:"見張りは「全体にかける」に置く", why:"状態の見張りは、環境全体が対象。", test:p=>p.watch==="all"},
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"誰が何をしたかは、全体を通して残す。", test:p=>p.trail==="all"},
-      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"運用の権限も、全体で厳密に管理する。", test:p=>p.iam==="all"},
-      {must:true,  text:"インターネットの入口は作らない", why:"運用の整備で、新しい入口を増やさない。入口は構築時の設計のまま。", test:p=>!p.igw},
+      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"運用の権限も、全体で厳密に管理する。", test:p=>p.iam==="all"},
+      {must:true,  text:"インターネットの入口は置かない", why:"運用の整備で、新しい入口を増やさない。入口は構築時の設計のまま。", test:p=>!p.igw},
       {must:true,  text:"振り分けは置かない", why:"振り分けは公開のための部品。運用の3点セットには含まれない。", test:p=>!p.alb},
       {must:false, text:"名前解決を「全体にかける」に置く", why:"案内役まで揃うと、公開の安定さが上がる。", test:p=>p.dns==="all"}
     ]
@@ -688,8 +689,8 @@ const IMISSIONS = [
       {must:true,  text:"データベースは「データを守る層」に置く", why:"注文や顧客の記録は、最も守るべきデータ。", test:p=>p.rds==="data"},
       {must:true,  text:"柔軟なデータベースは「データを守る層」に置く", why:"商品カタログやカートは、形の変わりやすいデータ。注文データとは分けて置く。", test:p=>p.ddb==="data"},
       {must:true,  text:"ファイル置き場は「データを守る層」に置く", why:"商品画像の置き場。配信は表側の高速化に任せ、元データは守る層へ。", test:p=>p.s3==="data"},
-      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"お店の運営権限は、全体で厳密に管理する。", test:p=>p.iam==="all"},
-      {must:true,  text:"閉域接続（専用線）は使わない", why:"世界中のお客に開く店に、専用線は要らない。高いだけの無駄なコストになる。", test:p=>!p.dx},
+      {must:true,  text:"権限の管理は「全体にかける」に置く", why:"お店の運営権限は、全体で厳密に管理する。", test:p=>p.iam==="all"},
+      {must:true,  text:"専用線は置かない", why:"世界中のお客に開く店に、専用線は要らない。高いだけの無駄なコストになる。", test:p=>!p.dx},
       {must:false, text:"順番待ちの列を「処理する層」に置く", why:"セールで注文が殺到しても、列があれば落とさず順に処理できる。", test:p=>p.sqs==="work"},
       {must:false, text:"見張りを「全体にかける」に置く", why:"売上と異常の両方を見張るのが、お店の運用。", test:p=>p.watch==="all"}
     ]
@@ -712,7 +713,7 @@ const IMISSIONS = [
       {must:true,  text:"決済の外部連携は「処理する層」に置く", why:"決済は外部の専門サービスへ。カード情報は自前で持たない鉄則は不変。", test:p=>p.pay==="work"},
       {must:true,  text:"バックアップは「データを守る層」に置く", why:"注文データは、壊れても戻せるようにする。お店の信用そのもの。", test:p=>p.backup==="data"},
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"注文や決済の操作は、後から追えるように残す。", test:p=>p.trail==="all"},
-      {must:true,  text:"閉域接続（専用線）は使わない", why:"世界中のお客に開く店に、専用線は要らない。", test:p=>!p.dx},
+      {must:true,  text:"専用線は置かない", why:"世界中のお客に開く店に、専用線は要らない。", test:p=>!p.dx},
       {must:false, text:"見張りを「全体にかける」に置く", why:"売上と異常の両方を見張るのが、お店の運用。", test:p=>p.watch==="all"}
     ]
   }
@@ -854,7 +855,7 @@ $("#btn-ijudge").addEventListener("click", ijudge);
 <script>
 "use strict";
 /* ============ PRACTICAL PROTOTYPE: one scenario, two boards ============ */
-const SHORT = {net:"ネット", src:"社内", corp:"社内", ai:"AI", ext:"外部", users:"社員", cdn:"配信", waf:"壁", alb:"振分", ec2:"サーバ", rds:"DB", watch:"見張り", dx:"専用線", agg:"集計", pub:"公開用", dash:"画面", plink:"接続口", idc:"本人確認", trail:"証跡", igw:"入口", backup:"控え", api:"連携", dwh:"倉庫"};
+const SHORT = {net:"ネット", src:"社内", corp:"社内", ai:"AI", ext:"外部", users:"社員", cdn:"配信", waf:"壁", alb:"振分", ec2:"サーバ", rds:"DB", watch:"見張り", dx:"専用線", agg:"集計", pub:"公開用", dash:"画面", plink:"接続口", idc:"本人確認", trail:"証跡", igw:"入口", backup:"控え", api:"連携", dwh:"倉庫", s3:"置き場", iam:"権限", sqs:"列"};
 const SLOT8 = [{x:112,y:52},{x:112,y:150},{x:112,y:248},{x:192,y:52},{x:192,y:150},{x:192,y:248},{x:272,y:100},{x:272,y:200}];
 const SLOT6 = [{x:112,y:52},{x:112,y:150},{x:112,y:248},{x:192,y:52},{x:192,y:150},{x:192,y:248}];
 const PRACS = [
@@ -862,35 +863,36 @@ const PRACS = [
     id:"prac1", title:"実践編 シナリオ1 ― コーポレートサイトを公開しよう",
     brief:"会社のコーポレートサイトを公開する。要件： <b>①外からの入口は1つに絞り、そこで攻撃を止める ②配信は速くする ③裏側のサーバーやデータは、外から直接触らせない ④問い合わせデータは一番守る場所へ</b>。",
     fixtures:[{id:"net", label:"ネット", x:34, y:150}], slots:SLOT8,
-    hand:["cdn","waf","alb","ec2","rds","watch","dx"], budget:12, stars3:1,
+    hand:["cdn","waf","alb","ec2","rds","watch","trail","dx"], budget:12, stars3:1,
     rules:[
       {must:true,  text:"インターネットと直接つながるのは「配信の高速化」だけ", why:"公開サイトの基本は、オリジン（裏側）を直接さらさないこと。入口は配信に一本化する。", test:(adj,p)=> ("cdn" in p) && !!adj.net && adj.net.size===1 && adj.net.has("cdn")},
       {must:true,  text:"配信の高速化 → 振り分け → 仮想サーバーの順につながっている", why:"客の流れは、配信で受けて、振り分けでさばいて、サーバーで処理する。", test:(adj,p)=> hasE(adj,"cdn","alb") && hasE(adj,"alb","ec2")},
-      {must:true,  text:"守りの壁が「振り分け」につながっている", why:"攻撃は、客が入ってくる振り分けのところで止める。", test:(adj,p)=> hasE(adj,"waf","alb")},
+      {must:true,  text:"守りの壁が「配信の高速化」につながっている", why:"要件①の「入口で攻撃を止める」がこれ。攻撃は、客が最初に届く入口で止める。", test:(adj,p)=> hasE(adj,"waf","cdn")},
       {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"問い合わせデータに触れるのは、処理するサーバーだけ。他のどこからも直接触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
-      {must:true,  text:"閉域接続（専用線）は使わない", why:"公開サイトに専用線は要らない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
-      {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"見張りは、守る対象につないで初めて意味がある。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")}
+      {must:true,  text:"専用線は置かない", why:"公開サイトに専用線は要らない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+      {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"見張りは、守る対象につないで初めて意味がある。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")},
+      {must:false, text:"証跡の記録が「仮想サーバー」か「データベース」につながっている", why:"問い合わせの操作は、後から追えるように残す。", test:(adj,p)=> hasE(adj,"trail","ec2") || hasE(adj,"trail","rds")}
     ]
   },
   {
     id:"prac2", title:"実践編 シナリオ2 ― 社内ダッシュボードを社外に公開しよう",
     brief:"社内の売上ダッシュボードを、取引先にも見せたいという要望が出た。要件： <b>①社内の生データは外に出さない ②公開用に整えたデータだけを見せる ③見る相手は本人確認を通す ④インターネットに公開されるのは画面だけにする</b>。",
     fixtures:[{id:"src", label:"社内", x:34, y:150},{id:"net", label:"ネット", x:286, y:150}], slots:SLOT6,
-    hand:["agg","pub","dash","idc","waf","watch","dx"], budget:9, stars3:1,
+    hand:["agg","pub","dash","idc","waf","watch","rds"], budget:9, stars3:1,
     rules:[
       {must:true,  text:"社内と直接つながるのは「集計・匿名化」だけ", why:"生データが外へ出る道は、集計・匿名化を通る1本だけにする。社内の仕組みをそのまま見せない。", test:(adj,p)=> ("agg" in p) && !!adj.src && adj.src.size===1 && adj.src.has("agg")},
       {must:true,  text:"集計・匿名化 → 公開用データ置き場の順につながっている", why:"整えたデータは、公開専用の置き場に分けて置く。", test:(adj,p)=> hasE(adj,"agg","pub")},
       {must:true,  text:"画面の表示は「公開用データ置き場」とつながっている", why:"画面が見てよいのは、公開用に整えたデータだけ。", test:(adj,p)=> hasE(adj,"pub","dash")},
       {must:true,  text:"インターネットと直接つながるのは「画面の表示」だけ", why:"公開されるのは画面だけ。データ置き場や集計の仕組みを、直接さらさない。", test:(adj,p)=> ("dash" in p) && !!adj.net && adj.net.size===1 && adj.net.has("dash")},
       {must:true,  text:"本人確認の窓口が「画面の表示」につながっている", why:"取引先ごとに、本人確認を通した人だけが画面を見られるようにする。", test:(adj,p)=> hasE(adj,"idc","dash")},
-      {must:true,  text:"閉域接続（専用線）は使わない", why:"相手が大勢の社外公開に、専用線は引けない。要件に合わない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+      {must:true,  text:"データベース（社内の生データ）は置かない", why:"置くのは、公開用に整えたデータだけ。生データそのものを置くと、①の前提が崩れる。", test:(adj,p)=> !("rds" in p)},
       {must:false, text:"守りの壁が「画面の表示」につながっている", why:"公開する画面は、攻撃からも守る。", test:(adj,p)=> hasE(adj,"waf","dash")},
       {must:false, text:"見張りが「公開用データ置き場」か「画面の表示」につながっている", why:"誰が何を見たかを、後から追えるようにする。", test:(adj,p)=> hasE(adj,"watch","pub") || hasE(adj,"watch","dash")}
     ]
   },
   {
     id:"prac3", title:"実践編 シナリオ3 ― 閉域のままAIを使おう",
-    brief:"生成AIを業務で使いたい。ただし会社のデータを外に漏らさないのが絶対条件。要件： <b>①AIサービスへは閉域の接続口だけでつなぐ（インターネット経由にしない）②社内データはアプリサーバーからだけ触る ③誰が何を聞いたかの証跡を残す</b>。",
+    brief:"生成AIを業務で使いたい。ただし会社のデータを外に漏らさないのが絶対条件。要件： <b>①AIサービスへは閉域の接続口だけでつなぐ（インターネット経由にしない）②業務データはクラウドのデータベースに置き、触れるのは仮想サーバーからだけ ③誰が何を聞いたかの証跡を残す</b>。",
     fixtures:[{id:"corp", label:"社内", x:34, y:150},{id:"ai", label:"AI", x:286, y:150}], slots:SLOT6,
     hand:["ec2","plink","rds","trail","watch","idc","igw"], budget:11, stars3:1,
     rules:[
@@ -899,30 +901,30 @@ const PRACS = [
       {must:true,  text:"AIサービスと直接つながるのは「閉域の接続口」だけ", why:"AI側の入口も1つに絞る。ほかの道からは届かない。", test:(adj,p)=> ("plink" in p) && !!adj.ai && adj.ai.size===1 && adj.ai.has("plink")},
       {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"社内データに触れるのは、業務アプリのサーバーだけ。AIからも直接は触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
       {must:true,  text:"証跡の記録が「仮想サーバー」につながっている", why:"誰が・何をAIに聞いたかの記録は、AI利用の絶対条件。", test:(adj,p)=> hasE(adj,"trail","ec2")},
-      {must:true,  text:"インターネットの入口は作らない", why:"入口を作ると、閉域の意味がなくなる。AIへの道は閉域の接続口だけ。", test:(adj,p)=> !("igw" in p)},
+      {must:true,  text:"インターネットの入口は置かない", why:"入口を作ると、閉域の意味がなくなる。AIへの道は閉域の接続口だけ。", test:(adj,p)=> !("igw" in p)},
       {must:false, text:"見張りが「仮想サーバー」につながっている", why:"普通と違う使い方を、早く見つけるため。", test:(adj,p)=> hasE(adj,"watch","ec2")},
       {must:false, text:"本人確認の窓口が「仮想サーバー」につながっている", why:"使う人を確かめてから、AIを使わせる。", test:(adj,p)=> hasE(adj,"idc","ec2")}
     ]
   },
   {
     id:"prac4", title:"実践編 シナリオ4 ― 基幹販売管理システムを閉域で動かそう",
-    brief:"会社の心臓部、販売管理の基幹システムをクラウドへ移す。要件： <b>①社内とは専用線だけでつなぐ（インターネットは経由しない）②販売データは一番守る場所へ ③誰が何をしたかの証跡と、鍵の管理は必須 ④壊れても戻せる備えがあると、なお良い</b>。",
+    brief:"会社の心臓部、販売管理の基幹システムをクラウドへ移す。要件： <b>①社内とは専用線だけでつなぐ（インターネットは経由しない）②販売データは一番守る場所へ ③誰が何をしたかの証跡と、権限の管理は必須 ④壊れても戻せる備えがあると、なお良い</b>。",
     fixtures:[{id:"corp", label:"社内", x:34, y:150}], slots:SLOT8,
     hand:["dx","ec2","rds","iam","trail","watch","backup","igw"], budget:14, stars3:1,
     rules:[
-      {must:true,  text:"社内と直接つながるのは「閉域接続」だけ", why:"基幹システムへの道は、専用線の1本だけに絞る。", test:(adj,p)=> ("dx" in p) && !!adj.corp && adj.corp.size===1 && adj.corp.has("dx")},
-      {must:true,  text:"閉域接続 → 仮想サーバーの順につながっている", why:"専用線の先で、業務の処理を受けるのが仮想サーバー。", test:(adj,p)=> hasE(adj,"dx","ec2")},
+      {must:true,  text:"社内と直接つながるのは「専用線」だけ", why:"基幹システムへの道は、専用線の1本だけに絞る。", test:(adj,p)=> ("dx" in p) && !!adj.corp && adj.corp.size===1 && adj.corp.has("dx")},
+      {must:true,  text:"専用線 → 仮想サーバーの順につながっている", why:"専用線の先で、業務の処理を受けるのが仮想サーバー。", test:(adj,p)=> hasE(adj,"dx","ec2")},
       {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"販売データに触れるのは、業務サーバーだけに限定する。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
-      {must:true,  text:"鍵の管理が「仮想サーバー」につながっている", why:"基幹システムこそ、誰が何をできるかを厳密に決める。", test:(adj,p)=> hasE(adj,"iam","ec2")},
+      {must:true,  text:"権限の管理が「仮想サーバー」につながっている", why:"基幹システムこそ、誰が何をできるかを厳密に決める。", test:(adj,p)=> hasE(adj,"iam","ec2")},
       {must:true,  text:"証跡の記録が「仮想サーバー」につながっている", why:"お金に近いシステムは、操作の記録が監査の生命線。", test:(adj,p)=> hasE(adj,"trail","ec2")},
-      {must:true,  text:"インターネットの入口は作らない", why:"閉域の基幹に、外の入口は要らない。", test:(adj,p)=> !("igw" in p)},
+      {must:true,  text:"インターネットの入口は置かない", why:"閉域の基幹に、外の入口は要らない。", test:(adj,p)=> !("igw" in p)},
       {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"止められないシステムこそ、異常に早く気づく仕組みが効く。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")},
       {must:false, text:"バックアップが「データベース」につながっている", why:"販売データは、壊れても戻せることが事業の継続そのもの。", test:(adj,p)=> hasE(adj,"backup","rds")}
     ]
   },
   {
     id:"prac5", title:"実践編 シナリオ5 ― 外部サービスと連携する物流システム",
-    brief:"在庫と配送の状況を、外部の運送サービスとやり取りする物流システムを作る。要件： <b>①外部との受け渡しは、窓口を1つに絞る ②注文が殺到しても、落とさず順に処理する ③社内のデータは、処理するサーバーからだけ触る</b>。",
+    brief:"在庫と配送の状況を、外部の運送サービスとやり取りする物流システムを作る。要件： <b>①外部との受け渡しは、窓口を1つに絞る ②注文が殺到しても、落とさず受け止めて処理する ③社内のデータは、仮想サーバーからだけ触る</b>。",
     fixtures:[{id:"corp", label:"社内", x:34, y:150},{id:"ext", label:"外部", x:286, y:150}], slots:SLOT6,
     hand:["ec2","sqs","api","rds","trail","watch","igw"], budget:10, stars3:1,
     rules:[
@@ -930,14 +932,14 @@ const PRACS = [
       {must:true,  text:"仮想サーバー → 順番待ちの列 → 連携の窓口の順につながっている", why:"外部連携は、列で受けてから窓口へ渡す。殺到しても落とさない流れにする。", test:(adj,p)=> hasE(adj,"ec2","sqs") && hasE(adj,"sqs","api")},
       {must:true,  text:"外部と直接つながるのは「連携の窓口」だけ", why:"外部サービスの先も、窓口を1つに絞って管理する。", test:(adj,p)=> ("api" in p) && !!adj.ext && adj.ext.size===1 && adj.ext.has("api")},
       {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"在庫データに触れるのは、処理するサーバーだけ。外部からは絶対に直接触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
-      {must:true,  text:"インターネットの入口は作らない", why:"外部との受け渡しは、連携の窓口に絞る。入口を別に作ると、そこが管理の外の抜け道になる。", test:(adj,p)=> !("igw" in p)},
+      {must:true,  text:"インターネットの入口は置かない", why:"外部との受け渡しは、連携の窓口に絞る。入口を別に作ると、そこが管理の外の抜け道になる。", test:(adj,p)=> !("igw" in p)},
       {must:false, text:"証跡の記録が「仮想サーバー」につながっている", why:"外部と何をやり取りしたか、後から追えるようにする。", test:(adj,p)=> hasE(adj,"trail","ec2")},
       {must:false, text:"見張りが「連携の窓口」か「仮想サーバー」につながっている", why:"連携の詰まりや異常を、早く見つけるため。", test:(adj,p)=> hasE(adj,"watch","api") || hasE(adj,"watch","ec2")}
     ]
   },
   {
     id:"prac6", title:"実践編 シナリオ6 ― BIツールを導入しよう",
-    brief:"社内の売上データを見える化する、社内向けのBI（分析の道具）を入れる。要件： <b>①生データを画面に直接つながない（集計を経由する）②画面を見られるのは社員だけ ③見る人は本人確認を通す</b>。",
+    brief:"社内の売上データを見える化する、社内向けのBI（分析の道具）を入れる。要件： <b>①生データを画面に直接つながない（集計を経由する）②画面を見られるのは社員だけ（社外からも、インターネット経由で見る）③見る人は本人確認を通す</b>。",
     fixtures:[{id:"src", label:"社内", x:34, y:150},{id:"users", label:"社員", x:286, y:150}], slots:SLOT6,
     hand:["rds","agg","dash","idc","watch","trail","dx"], budget:11, stars3:1,
     rules:[
@@ -946,22 +948,22 @@ const PRACS = [
       {must:true,  text:"画面の表示は「集計・匿名化」と「社員」につながり、「データベース」とは直接つながらない", why:"画面の裏側は集計だけ、見る側は社員だけ。生データの置き場と画面を直接つなぐと、集計を経由する意味がなくなる。", test:(adj,p)=> hasE(adj,"dash","agg") && hasE(adj,"dash","users") && !hasE(adj,"dash","rds")},
       {must:true,  text:"社員と直接つながるのは「画面の表示」だけ", why:"社員が触れるのは画面だけ。データや集計の仕組みには触らせない。", test:(adj,p)=> !!adj.users && adj.users.size===1 && adj.users.has("dash")},
       {must:true,  text:"本人確認の窓口が「画面の表示」につながっている", why:"売上データは社内でも機密。本人確認を通した社員だけが見られるようにする。", test:(adj,p)=> hasE(adj,"idc","dash")},
-      {must:true,  text:"閉域接続（専用線）は使わない", why:"社内の道具に、専用線の出番はない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+      {must:true,  text:"専用線は置かない", why:"社員は社外からも見る前提なので、専用線では届かない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
       {must:false, text:"見張りが「画面の表示」か「集計・匿名化」につながっている", why:"普段と違う見方をされていないか、見張る。", test:(adj,p)=> hasE(adj,"watch","dash") || hasE(adj,"watch","agg")},
       {must:false, text:"証跡の記録が「画面の表示」につながっている", why:"誰が・いつ・何の数字を見たかを、後から追えるようにする。", test:(adj,p)=> hasE(adj,"trail","dash")}
     ]
   },
   {
     id:"prac7", title:"実践編 シナリオ7 ― DWH・データレイクを作ろう",
-    brief:"あちこちに散らかったデータを集めて、分析できる形に整える。要件： <b>①データは集計を通して、分析専用の倉庫へ集める ②元の形のままのデータは、レイク（ファイル置き場）に残す ③業務データベースを、分析に直接つながない ④見る側は社員だけ</b>。",
+    brief:"あちこちに散らかったデータを集めて、分析できる形に整える。要件： <b>①元の形のままのデータは、まずレイク（ファイル置き場）に集める ②集計を通して、分析専用の倉庫へ入れる ③業務データベースを、分析に直接つながない ④見る側は社員だけ</b>。",
     fixtures:[{id:"src", label:"社内", x:34, y:150},{id:"users", label:"社員", x:286, y:150}], slots:SLOT8,
     hand:["agg","s3","dwh","dash","idc","watch","trail","rds"], budget:12, stars3:2,
     rules:[
-      {must:true,  text:"社内と直接つながるのは「集計・匿名化」だけ", why:"データを取り込む口は、集計の1本に絞る。", test:(adj,p)=> ("agg" in p) && !!adj.src && adj.src.size===1 && adj.src.has("agg")},
-      {must:true,  text:"集計・匿名化 → 分析の倉庫 → 画面の表示の順につながっている", why:"分析は、分析専用の倉庫に対して行う。本業の仕組みに負荷をかけない。", test:(adj,p)=> hasE(adj,"agg","dwh") && hasE(adj,"dwh","dash")},
-      {must:true,  text:"ファイル置き場（レイク）は「集計・匿名化」と「分析の倉庫」につながっている", why:"元の形のデータはレイクに残し、倉庫からも参照できるようにする。", test:(adj,p)=> hasE(adj,"s3","agg") && hasE(adj,"s3","dwh")},
+      {must:true,  text:"社内と直接つながるのは「ファイル置き場（レイク）」だけ", why:"データを取り込む口は、まずレイクの1本に絞る。元の形のまま受けるのがレイクの役目。", test:(adj,p)=> ("s3" in p) && !!adj.src && adj.src.size===1 && adj.src.has("s3")},
+      {must:true,  text:"ファイル置き場 → 集計・匿名化 → 分析の倉庫の順につながっている", why:"流れは「元のデータ → レイク → 加工 → 倉庫」。分析は、分析専用の倉庫に対して行う。", test:(adj,p)=> hasE(adj,"s3","agg") && hasE(adj,"agg","dwh")},
+      {must:true,  text:"画面の表示は「分析の倉庫」とつながっている", why:"画面が見てよいのは、倉庫に集めた分析用のデータだけ。", test:(adj,p)=> hasE(adj,"dwh","dash")},
       {must:true,  text:"社員と直接つながるのは「画面の表示」だけ", why:"分析の結果を見る窓は、画面だけに絞る。", test:(adj,p)=> ("dash" in p) && !!adj.users && adj.users.size===1 && adj.users.has("dash")},
-      {must:true,  text:"データベース（業務用）は置かない", why:"業務データベースを分析に直接つなぐと、本業の処理に負荷がかかる。データは倉庫へ集めるのが、この構成の考え方。", test:(adj,p)=> !("rds" in p)},
+      {must:true,  text:"データベースが「分析の倉庫」や「画面の表示」と直接つながっていない", why:"要件③は「直結させない」こと。業務DBを置くなら、集計を経由する形にすること（シナリオ6と同じ考え方）。", test:(adj,p)=> !hasE(adj,"rds","dwh") && !hasE(adj,"rds","dash")},
       {must:false, text:"本人確認の窓口が「画面の表示」につながっている", why:"分析結果も、見る人を確かめてから見せる。", test:(adj,p)=> hasE(adj,"idc","dash")},
       {must:false, text:"見張りが「分析の倉庫」か「画面の表示」につながっている", why:"倉庫の使われ方と、画面の異常を見張る。", test:(adj,p)=> hasE(adj,"watch","dwh") || hasE(adj,"watch","dash")},
       {must:false, text:"証跡の記録が「集計・匿名化」につながっている", why:"どのデータを取り込んだかの記録は、分析の信頼性の土台。", test:(adj,p)=> hasE(adj,"trail","agg")}
@@ -969,16 +971,15 @@ const PRACS = [
   },
   {
     id:"prac8", title:"実践編 シナリオ8 ― クラウドストレージへ移管しよう",
-    brief:"社内のファイル置き場を、クラウドの置き場へ移す。要件： <b>①移す道は専用線だけ（インターネット経由で送らない）②置き場は公開しない ③誰が触れるかの鍵の管理は必須</b>。",
+    brief:"社内のファイル置き場を、クラウドの置き場へ移す。要件： <b>①移す道は専用線だけ（インターネット経由で送らない）②置き場へは閉域の接続口を通し、公開しない ③誰が触れるかの権限の管理は必須</b>。",
     fixtures:[{id:"corp", label:"社内", x:34, y:150}], slots:SLOT6,
-    hand:["dx","s3","iam","trail","watch","igw","alb"], budget:7, stars3:1,
+    hand:["dx","plink","s3","iam","trail","watch","igw"], budget:9, stars3:1,
     rules:[
-      {must:true,  text:"社内と直接つながるのは「閉域接続」だけ", why:"社内から外へ出る道は、専用線の1本だけ。", test:(adj,p)=> ("dx" in p) && !!adj.corp && adj.corp.size===1 && adj.corp.has("dx")},
-      {must:true,  text:"閉域接続 → ファイル置き場の順につながっている", why:"ファイルは、専用線を通ってクラウドの置き場へ届く。", test:(adj,p)=> hasE(adj,"dx","s3")},
-      {must:true,  text:"ファイル置き場は「閉域接続」とつながり、入口や振り分けとはつながらない", why:"置き場への道は専用線だけ。公開側の部品とつなぐと、非公開の前提が崩れる。", test:(adj,p)=> hasE(adj,"dx","s3") && !hasE(adj,"s3","igw") && !hasE(adj,"s3","alb")},
-      {must:true,  text:"鍵の管理が「ファイル置き場」につながっている", why:"置き場に触れる人を、厳密に決める。移管の要点はここ。", test:(adj,p)=> hasE(adj,"iam","s3")},
-      {must:true,  text:"インターネットの入口は作らない", why:"公開しない保管に、外の入口は要らない。", test:(adj,p)=> !("igw" in p)},
-      {must:true,  text:"振り分けは置かない", why:"振り分けは、公開する先へ配るための部品。非公開の置き場には要らない。", test:(adj,p)=> !("alb" in p)},
+      {must:true,  text:"社内と直接つながるのは「専用線」だけ", why:"社内から外へ出る道は、専用線の1本だけ。", test:(adj,p)=> ("dx" in p) && !!adj.corp && adj.corp.size===1 && adj.corp.has("dx")},
+      {must:true,  text:"専用線 → 閉域の接続口 → ファイル置き場の順につながっている", why:"専用線で来た先も、置き場へは閉域の接続口を通す。実務で閉域のまま置き場へ届かせるには、この一手間が要る。", test:(adj,p)=> hasE(adj,"dx","plink") && hasE(adj,"plink","s3")},
+      {must:true,  text:"ファイル置き場は「閉域の接続口」とつながり、インターネットの入口とはつながらない", why:"置き場への道は、閉域の接続口からだけ。公開側の部品とつなぐと、非公開の前提が崩れる。", test:(adj,p)=> hasE(adj,"plink","s3") && !hasE(adj,"s3","igw")},
+      {must:true,  text:"権限の管理が「ファイル置き場」につながっている", why:"置き場に触れる人を、厳密に決める。移管の要点はここ。", test:(adj,p)=> hasE(adj,"iam","s3")},
+      {must:true,  text:"インターネットの入口は置かない", why:"公開しない保管に、外の入口は要らない。", test:(adj,p)=> !("igw" in p)},
       {must:false, text:"証跡の記録が「ファイル置き場」につながっている", why:"誰が・いつ・何を出し入れしたかを、後から追えるようにする。", test:(adj,p)=> hasE(adj,"trail","s3")},
       {must:false, text:"見張りが「ファイル置き場」につながっている", why:"普段と違う出し入れに、早く気づくため。", test:(adj,p)=> hasE(adj,"watch","s3")}
     ]
@@ -1346,7 +1347,7 @@ const LABS = [
         options:[
           {t:"強い権限の鍵を、置き場に置いて共有していた", kind:"must", why:"置かれていた形跡と、外部からの使用履歴が一致する。"},
           {t:"攻撃者がサーバーに侵入して、鍵を盗んだ", kind:"bad", why:"侵入の形跡ではなく「置かれていた」ことが問題の中心。"},
-          {t:"鍵の管理の仕組み自体が、壊れていた", kind:"bad", why:"仕組みの故障ではなく、置き方と権限の強さの問題。"}
+          {t:"鍵を管理する仕組み自体が、壊れていた", kind:"bad", why:"仕組みの故障ではなく、置き方と権限の強さの問題。"}
         ]},
       { name:"恒久対策", pick:"multi",
         prompt:"二度と起こさないために、何をする？（必要なものを全部）",
