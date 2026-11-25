@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CLOUDSMITH — Forge Your Secure Environment</title>
+<link rel="icon" href="assets/appicon-192.png">
+<style>
+  :root{
+    --bg:#081831; --bg2:#0b2148; --panel:#0e2a55; --panel2:#12315f;
+    --line:#2b5ea7; --teal:#39d5e8; --amber:#f5a83d; --text:#eaf4ff;
+    --muted:#9db9dd; --good:#4ade80; --bad:#f87171; --card:#f4f7fb;
+    --cardink:#12233d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:
+      linear-gradient(rgba(57,213,232,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57,213,232,.05) 1px, transparent 1px),
+      linear-gradient(180deg, var(--bg2), var(--bg));
+    background-size:28px 28px, 28px 28px, 100% 100%;
+    color:var(--text);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:16px 14px 40px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  /* title */
+  #scr-title{text-align:center; padding-top:6vh;}
+  #scr-title img{width:min(88vw,460px); height:auto; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,.5);}
+  .ver{color:var(--muted); font-size:12px; margin-top:14px; letter-spacing:.08em;}
+  /* buttons: uniform, full width, left aligned, no wrap */
+  .btn{
+    display:block; width:100%; margin:10px 0; padding:15px 16px;
+    background:linear-gradient(180deg, var(--panel2), var(--panel));
+    color:var(--text); border:2px solid var(--line); border-radius:10px;
+    font-size:16px; font-weight:700; text-align:left; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{border-color:var(--amber); color:#ffd9a0;}
+  .btn:disabled{opacity:.38; cursor:default;}
+  .btn .stars{color:var(--amber); float:right; letter-spacing:.1em;}
+  h2{font-size:19px; margin:8px 0 4px; letter-spacing:.04em;}
+  .sub{color:var(--muted); font-size:13px; margin:0 0 12px; line-height:1.6;}
+  /* play */
+  .brief{
+    background:rgba(14,42,85,.85); border:2px solid var(--line); border-radius:10px;
+    padding:12px 14px; font-size:14px; line-height:1.7;
+  }
+  .brief b{color:#ffd9a0;}
+  .budget{margin:10px 2px 0; font-size:14px; color:var(--muted);}
+  .budget b{color:var(--text); font-size:16px;}
+  .budget.over b{color:var(--bad);}
+  .board{
+    display:flex; align-items:stretch; gap:6px; margin:16px 0 6px;
+  }
+  .net{
+    flex:0 0 15%; display:flex; align-items:center; justify-content:center;
+    background:#06203f; border:2px dashed var(--teal); border-radius:10px;
+    color:var(--teal); font-size:11px; font-weight:700; text-align:center;
+    padding:6px 2px; line-height:1.5;
+  }
+  .slot{
+    flex:1; min-height:96px; border:2px dashed rgba(157,185,221,.55); border-radius:10px;
+    display:flex; align-items:center; justify-content:center; padding:4px;
+    background:rgba(255,255,255,.03); cursor:pointer;
+  }
+  .slot.filled{border-style:solid; border-color:transparent; background:transparent; padding:0;}
+  .slot .empty-label{color:rgba(157,185,221,.6); font-size:11px;}
+  .arrow{align-self:center; color:var(--teal); font-size:13px; flex:0 0 auto;}
+  .depth{display:flex; gap:6px; margin:0 0 4px;}
+  .depth span{flex:1; text-align:center; font-size:10px; color:rgba(157,185,221,.75);}
+  .depth span:first-child{flex:0 0 15%;}
+  .card{
+    width:100%; min-height:96px; background:var(--card); color:var(--cardink);
+    border-radius:8px; border-top:8px solid var(--line); padding:7px 8px;
+    cursor:pointer; user-select:none;
+  }
+  .card .nm{font-size:13px; font-weight:800; line-height:1.35;}
+  .card .ds{font-size:10.5px; line-height:1.45; color:#42557a; margin-top:3px;}
+  .card .ct{font-size:11px; font-weight:700; color:#8a5a12; margin-top:4px;}
+  .card.c-web{border-top-color:#38bdf8;} .card.c-fw{border-top-color:#f87171;}
+  .card.c-gate{border-top-color:#f5a83d;} .card.c-vault{border-top-color:#a78bfa;}
+  .card.c-inside{border-top-color:#4ade80;} .card.c-log{border-top-color:#94a3b8;}
+  .card.c-copy{border-top-color:#2dd4bf;} .card.c-seal{border-top-color:#f472b6;}
+  .card.c-line{border-top-color:#facc15;}
+  .hand{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px;}
+  .hand .card{width:calc(33.333% - 6px); min-height:104px;}
+  .card.sel{outline:3px solid var(--amber); outline-offset:1px;}
+  .hand-label, .board-label{font-size:12px; color:var(--muted); margin:14px 0 0; letter-spacing:.06em;}
+  /* result */
+  #result{display:none; margin-top:16px; background:rgba(14,42,85,.92);
+    border:2px solid var(--amber); border-radius:10px; padding:14px;}
+  #result.show{display:block;}
+  #result h3{margin:0 0 6px; font-size:18px;}
+  #result .rstars{color:var(--amber); font-size:20px; letter-spacing:.15em;}
+  .rule{font-size:13.5px; line-height:1.55; padding:7px 0; border-bottom:1px solid rgba(157,185,221,.18);}
+  .rule:last-of-type{border-bottom:none;}
+  .rule .mk{font-weight:800; margin-right:6px;}
+  .rule .ok{color:var(--good);} .rule .ng{color:var(--bad);}
+  .rule .tag{font-size:10.5px; color:var(--muted); border:1px solid var(--line);
+    border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:1px;}
+  .rule .why{display:block; color:var(--muted); font-size:12.5px; margin-top:2px;}
+  @media (max-width:480px){
+    .slot .card .ds{display:none;}
+    .slot .card{min-height:78px;} .slot{min-height:78px;}
+    .card .nm{font-size:12px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TITLE -->
+  <section id="scr-title" class="screen active">
+    <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
+    <div style="height:18px"></div>
+    <button class="btn primary" id="btn-start">基礎編をはじめる</button>
+    <p class="ver">CLOUDSMITH prototype v0.1 — 基礎編</p>
+  </section>
+
+  <!-- MISSION SELECT -->
+  <section id="scr-select" class="screen">
+    <h2>基礎編 ― 概念カード</h2>
+    <p class="sub">製品名は使わない。「置き場所」と「守り方」の考え方だけで組み立てる練習です。カードを選んで、外（インターネット側）から奥へ順に並べてください。</p>
+    <div id="mission-list"></div>
+    <button class="btn" id="btn-to-title">タイトルへもどる</button>
+  </section>
+
+  <!-- PLAY -->
+  <section id="scr-play" class="screen">
+    <h2 id="play-title"></h2>
+    <div class="brief" id="play-brief"></div>
+    <p class="budget" id="play-budget"></p>
+    <p class="board-label">おきば（左が外 ＝ インターネット側、右が奥）</p>
+    <div class="board" id="board"></div>
+    <div class="depth"><span></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+    <p class="hand-label">てもちのカード（タップで選ぶ → おきばをタップで置く／置いたカードのタップで戻す）</p>
+    <div class="hand" id="hand"></div>
+    <button class="btn primary" id="btn-judge">判定する</button>
+    <button class="btn" id="btn-reset">並べ直す</button>
+    <button class="btn" id="btn-to-select">ミッション選択へもどる</button>
+    <div id="result"></div>
+  </section>
+
+</div>
+<script>
+"use strict";
+/* ============ DATA: concept cards (no product names) ============ */
+const CARDS = {
+  web:   {name:"公開サーバー",   cost:2, desc:"外の人に見せるための置き場"},
+  fw:    {name:"仕切り",         cost:2, desc:"通れるものと、通れないものを分ける"},
+  gate:  {name:"門番",           cost:2, desc:"鍵や合言葉を確かめてから通す"},
+  vault: {name:"大事なデータ",   cost:3, desc:"守りたい中身そのもの"},
+  inside:{name:"社内サーバー",   cost:2, desc:"社内の人だけが使う道具"},
+  log:   {name:"見張り記録",     cost:1, desc:"誰が・いつ・どこを通ったかを残す"},
+  copy:  {name:"控え",           cost:2, desc:"壊れても元に戻せる写し"},
+  seal:  {name:"封印",           cost:2, desc:"中身を見られないよう封をする"},
+  line:  {name:"専用通路",       cost:3, desc:"外を通らない、専用の道"}
+};
+/* rule helpers: board = array(5) of cardId|null */
+const P = (b,id)=> b.indexOf(id);
+const placed = (b,id)=> P(b,id) >= 0;
+
+const MISSIONS = [
+  {
+    id:"m1", title:"ミッション1 ― ホームページを公開しよう",
+    brief:"会社のホームページを、世界中の人に見せたい。<b>公開サーバー</b>で見せつつ、会社の<b>大事なデータ</b>は外から直接触られないように守ること。",
+    hand:["web","fw","vault","log","copy"], budget:10, stars3:3,
+    rules:[
+      {must:true,  text:"公開サーバーを置く", why:"見せたいものは、まず外から届く場所に置くのが基本。", test:b=>placed(b,"web")},
+      {must:true,  text:"大事なデータを置く", why:"守る対象そのものがないと、構成として完成しない。", test:b=>placed(b,"vault")},
+      {must:true,  text:"大事なデータは、公開サーバーより奥に置く", why:"外に見せる物と、大事な物は置き場所を分ける。奥にあるほど外から届きにくい。", test:b=>placed(b,"web")&&placed(b,"vault")&&P(b,"vault")>P(b,"web")},
+      {must:true,  text:"公開サーバーと大事なデータの間に「仕切り」を置く", why:"間に仕切りがあると、外からの通り道をここで止められる。", test:b=>placed(b,"web")&&placed(b,"vault")&&placed(b,"fw")&&P(b,"fw")>P(b,"web")&&P(b,"fw")<P(b,"vault")},
+      {must:false, text:"大事なデータを一番奥（6）に置く", why:"一番奥が、最も外から遠くて安全な場所。", test:b=>P(b,"vault")===5},
+      {must:false, text:"見張り記録を置く", why:"何かあったとき、記録がないと「何が起きたか」が分からない。", test:b=>placed(b,"log")},
+      {must:false, text:"控えを置く", why:"壊されたり消されたりしても、控えがあれば元に戻せる。", test:b=>placed(b,"copy")}
+    ]
+  },
+  {
+    id:"m2", title:"ミッション2 ― 社内だけの道具を守ろう",
+    brief:"社内の人だけが使う<b>社内サーバー</b>を用意したい。外の人には見せないし、触らせない。社内の大事なデータは、さらに奥に置くこと。",
+    hand:["inside","fw","gate","vault","web","log"], budget:12, stars3:1,
+    rules:[
+      {must:true,  text:"社内サーバーを置く", why:"使う道具そのものが要る。", test:b=>placed(b,"inside")},
+      {must:true,  text:"公開サーバーは置かない", why:"社内だけの道具に「外に見せる置き場」は要らない。置くと、それだけ外から狙われる入口が増える。", test:b=>!placed(b,"web")},
+      {must:true,  text:"社内サーバーの手前に「門番」を置く", why:"社内の人かどうかを、入る前に確かめる。門番より奥に置くと意味がない。", test:b=>placed(b,"gate")&&placed(b,"inside")&&P(b,"gate")<P(b,"inside")},
+      {must:true,  text:"社内サーバーの手前に「仕切り」を置く", why:"外からの通り道を、まず仕切りで区切る。", test:b=>placed(b,"fw")&&placed(b,"inside")&&P(b,"fw")<P(b,"inside")},
+      {must:true,  text:"大事なデータは、社内サーバーより奥に置く", why:"道具よりも、その中身の方が大事。データはさらに奥へ。", test:b=>placed(b,"vault")&&placed(b,"inside")&&P(b,"vault")>P(b,"inside")},
+      {must:false, text:"見張り記録を置く", why:"社内の道具こそ「誰が使ったか」の記録が効く。", test:b=>placed(b,"log")},
+    ]
+  },
+  {
+    id:"m3", title:"ミッション3 ― 大事なデータを守りぬこう",
+    brief:"会社の<b>大事なデータ</b>を、できる限り固く守りたい。ホームページの公開は続けるが、データには何重もの守りをかけること。予算は限られているので、全部は置けない。",
+    hand:["web","fw","gate","seal","vault","copy","line","log"], budget:14, stars3:1,
+    rules:[
+      {must:true,  text:"大事なデータを一番奥（6）に置く", why:"最も大事な物は、最も外から遠い場所へ。", test:b=>P(b,"vault")===5},
+      {must:true,  text:"大事なデータの直前に「封印」を置く", why:"万一たどり着かれても、中身を見られないようにする最後の守り。", test:b=>placed(b,"seal")&&placed(b,"vault")&&P(b,"seal")===P(b,"vault")-1},
+      {must:true,  text:"「仕切り」の奥に「門番」を置く（二重の守り）", why:"仕切りで区切り、その内側で本人を確かめる。守りは重ねるもの。", test:b=>placed(b,"fw")&&placed(b,"gate")&&P(b,"gate")>P(b,"fw")},
+      {must:true,  text:"公開サーバーは「仕切り」より手前に置く", why:"外に見せる物は仕切りの外側、守る物は内側。この線引きが崩れると守りにならない。", test:b=>placed(b,"web")&&placed(b,"fw")&&P(b,"web")<P(b,"fw")},
+      {must:false, text:"控えを置く", why:"守りを破られても、控えがあれば仕事は続けられる。", test:b=>placed(b,"copy")},
+      {must:false, text:"見張り記録を置く", why:"守りの成否は、記録で確かめる。", test:b=>placed(b,"log")},
+      {must:false, text:"専用通路を置く", why:"大事なやり取りは、外の通り道そのものを使わない手もある。", test:b=>placed(b,"line")}
+    ]
+  }
+];
+</script>
+<script>
+"use strict";
+/* ============ STATE & LOGIC ============ */
+const SLOTS = 6;
+let cur = 0;                 // current mission index
+let board = Array(SLOTS).fill(null);
+let selected = null;         // selected cardId from hand
+const SAVE_KEY = "cloudsmith-basics-v1";
+let progress = {};
+try{ progress = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); }catch(e){ progress = {}; }
+
+const $ = s=>document.querySelector(s);
+function show(id){
+  document.querySelectorAll(".screen").forEach(el=>el.classList.remove("active"));
+  $("#"+id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function costOf(b){ return b.reduce((s,id)=> s + (id? CARDS[id].cost:0), 0); }
+function handCards(){
+  const m = MISSIONS[cur];
+  return m.hand.filter(id=> !board.includes(id));
+}
+function cardHTML(id){
+  const c = CARDS[id];
+  return `<div class="card c-${id}" data-card="${id}">
+    <div class="nm">${c.name}</div><div class="ds">${c.desc}</div>
+    <div class="ct">コスト ${c.cost}</div></div>`;
+}
+/* ---- mission select ---- */
+function renderSelect(){
+  const list = $("#mission-list");
+  list.innerHTML = "";
+  MISSIONS.forEach((m,i)=>{
+    const st = progress[m.id] || 0;
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.innerHTML = `${m.title}<span class="stars">${"★".repeat(st)}${"☆".repeat(3-st)}</span>`;
+    btn.addEventListener("click", ()=> startMission(i));
+    list.appendChild(btn);
+  });
+}
+/* ---- play ---- */
+function startMission(i){
+  cur = i; board = Array(SLOTS).fill(null); selected = null;
+  const m = MISSIONS[cur];
+  $("#play-title").textContent = m.title;
+  $("#play-brief").innerHTML = m.brief;
+  $("#result").className = ""; $("#result").innerHTML = "";
+  renderPlay();
+  show("scr-play");
+}
+function renderPlay(){
+  const m = MISSIONS[cur];
+  /* budget */
+  const cost = costOf(board), over = cost > m.budget;
+  const bud = $("#play-budget");
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${m.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.className = "budget" + (over? " over":"");
+  /* board */
+  const bd = $("#board");
+  bd.innerHTML = "";
+  const net = document.createElement("div");
+  net.className = "net"; net.textContent = "インター ネット";
+  bd.appendChild(net);
+  board.forEach((id,i)=>{
+    if(i>0 || true){ const ar=document.createElement("div"); ar.className="arrow"; ar.textContent="›"; if(i===0){ar.style.visibility="hidden";} bd.appendChild(ar); }
+    const slot = document.createElement("div");
+    slot.className = "slot" + (id? " filled":"");
+    if(id){
+      slot.innerHTML = cardHTML(id);
+      slot.addEventListener("click", ()=>{ board[i]=null; selected=null; renderPlay(); });
+    }else{
+      slot.innerHTML = `<span class="empty-label">あき</span>`;
+      slot.addEventListener("click", ()=>{
+        if(selected && !board.includes(selected)){ board[i]=selected; selected=null; renderPlay(); }
+      });
+    }
+    bd.appendChild(slot);
+  });
+  /* hand */
+  const hd = $("#hand");
+  hd.innerHTML = "";
+  handCards().forEach(id=>{
+    const wrap = document.createElement("div");
+    wrap.innerHTML = cardHTML(id);
+    const el = wrap.firstChild;
+    if(selected===id) el.classList.add("sel");
+    el.addEventListener("click", ()=>{ selected = (selected===id? null: id); renderPlay(); });
+    hd.appendChild(el);
+  });
+  if(handCards().length===0){
+    hd.innerHTML = `<p class="sub" style="margin:0">てもちのカードはありません</p>`;
+  }
+}
+/* ---- judge ---- */
+function judge(){
+  const m = MISSIONS[cur];
+  const over = costOf(board) > m.budget;
+  const results = m.rules.map(r=> ({r, ok: r.test(board)}));
+  const mustOk = results.filter(x=>x.r.must).every(x=>x.ok) && !over;
+  const bonusOk = results.filter(x=>!x.r.must && x.ok).length;
+  const bonusAll = results.filter(x=>!x.r.must).length;
+  let stars = 0;
+  if(mustOk){ const need = (m.stars3!=null? m.stars3 : bonusAll); stars = bonusOk>=need? 3 : (bonusOk>=1? 2:1); }
+  if(mustOk){
+    const prev = progress[m.id] || 0;
+    if(stars > prev){ progress[m.id] = stars; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }catch(e){} }
+  }
+  const box = $("#result");
+  let html = `<h3>${mustOk? "クリア！":"まだ守りきれていない"}</h3>`;
+  if(mustOk) html += `<div class="rstars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</div>`;
+  html += `<div class="rule"><span class="mk ${over? "ng":"ok"}">${over? "×":"○"}</span>予算 ${m.budget} 以内におさめる<span class="tag">必須</span><span class="why">合計コスト ${costOf(board)}。良い構成は、強さとコストの両立で決まる。</span></div>`;
+  results.forEach(({r,ok})=>{
+    html += `<div class="rule"><span class="mk ${ok? "ok":"ng"}">${ok? "○":"×"}</span>${r.text}<span class="tag">${r.must? "必須":"加点"}</span><span class="why">${r.why}</span></div>`;
+  });
+  if(mustOk && cur < MISSIONS.length-1)
+    html += `<button class="btn primary" id="btn-next">次のミッションへ</button>`;
+  if(mustOk && cur === MISSIONS.length-1)
+    html += `<p class="sub" style="margin:10px 0 0">基礎編の試作はここまで。おつかれさまでした。</p>`;
+  box.innerHTML = html;
+  box.className = "show";
+  const nb = $("#btn-next");
+  if(nb) nb.addEventListener("click", ()=> startMission(cur+1));
+  box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+/* ---- wiring ---- */
+$("#btn-start").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
+$("#btn-to-title").addEventListener("click", ()=> show("scr-title"));
+$("#btn-to-select").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
+$("#btn-reset").addEventListener("click", ()=>{ board = Array(SLOTS).fill(null); selected=null; $("#result").className=""; $("#result").innerHTML=""; renderPlay(); });
+$("#btn-judge").addEventListener("click", judge);
+</script>
+</body>
+</html>
