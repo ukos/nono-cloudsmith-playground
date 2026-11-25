@@ -131,6 +131,7 @@
   .card.k-idc{border-top-color:#38bdf8;} .card.k-ava{border-top-color:#4ade80;}
   .card.k-cdn{border-top-color:#818cf8;} .card.k-ddb{border-top-color:#a78bfa;}
   .card.k-sqs{border-top-color:#facc15;} .card.k-pay{border-top-color:#4ade80;}
+  .card.k-agg{border-top-color:#fb923c;} .card.k-pub{border-top-color:#2dd4bf;} .card.k-dash{border-top-color:#e879f9;}
   #gresult, #hresult{display:none; margin-top:16px; background:rgba(14,42,85,.92); border:2px solid var(--amber); border-radius:10px; padding:14px;}
   #gresult.show, #hresult.show{display:block;}
   #gresult h3, #hresult h3{margin:0 0 6px; font-size:18px;}
@@ -162,7 +163,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.6 — 実践編はグラフ盤面を本採用</p>
+    <p class="ver">CLOUDSMITH prototype v0.7 — 実践編シナリオ3つ</p>
   </section>
 
   <!-- MODE SELECT -->
@@ -226,9 +227,9 @@
   <!-- PRACTICAL: BOARD COMPARISON -->
   <section id="scr-prac" class="screen">
     <h2>実践編 ― 盤面の比較試作</h2>
-    <p class="sub">盤面は<b>グラフ盤面を本採用</b>としました（置いて、線でつなぐ方式。つながりが一番わかりやすいため）。ヘックス盤面（隣り合えばつながっている方式）は、比較試作として残してあります。</p>
-    <button class="btn primary" id="btn-prac-graph">グラフ盤面で試す</button>
-    <button class="btn primary" id="btn-prac-hex">ヘックス盤面で試す</button>
+    <p class="sub">盤面は<b>グラフ盤面を本採用</b>としました（置いて、線でつなぐ方式。つながりが一番わかりやすいため）。ヘックス盤面（隣り合えばつながっている方式）は、比較試作として残してあります。シナリオは3つあります。</p>
+    <div id="prac-list"></div>
+    <button class="btn" id="btn-prac-hex">ヘックス盤面で試す（シナリオ1の比較用）</button>
     <button class="btn" id="btn-prac-back">編の選択へもどる</button>
   </section>
 
@@ -482,7 +483,10 @@ const ICARDS = {
   cdn:  {name:"配信の高速化",         aws:"Amazon CloudFront",          cost:2, desc:"ページや画像を、近い場所から速く届ける"},
   ddb:  {name:"柔軟なデータベース",   aws:"Amazon DynamoDB",            cost:3, desc:"カタログやカートのような、形の柔軟なデータ向き"},
   sqs:  {name:"順番待ちの列",         aws:"Amazon SQS",                 cost:1, desc:"注文が殺到しても、列で受けて順に処理する"},
-  pay:  {name:"決済の外部連携",       aws:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"}
+  pay:  {name:"決済の外部連携",       aws:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"},
+  agg:  {name:"集計・匿名化",         aws:"AWS Glue",                   cost:2, desc:"生データを、集計して個人が分からない形に変える"},
+  pub:  {name:"公開用データ置き場",   aws:"Amazon S3",                  cost:1, desc:"公開してよい形になったデータだけを置く"},
+  dash: {name:"画面の表示",           aws:"Amazon QuickSight",          cost:3, desc:"ダッシュボードの画面そのもの"}
 };
 const IMISSIONS = [
   {
@@ -699,36 +703,73 @@ $("#btn-ijudge").addEventListener("click", ijudge);
 <script>
 "use strict";
 /* ============ PRACTICAL PROTOTYPE: one scenario, two boards ============ */
-const SHORT = {net:"ネット", cdn:"配信", waf:"壁", alb:"振分", ec2:"サーバ", rds:"DB", watch:"見張り", dx:"専用線"};
-const PRAC = {
-  title:"実践編 試作 ― コーポレートサイトを公開しよう",
-  brief:"会社のコーポレートサイトを公開する。要件： <b>①外からの入口は1つに絞り、そこで攻撃を止める ②配信は速くする ③裏側のサーバーやデータは、外から直接触らせない ④問い合わせデータは一番守る場所へ</b>。",
-  hand:["cdn","waf","alb","ec2","rds","watch","dx"], budget:12, stars3:1,
-  rules:[
-    {must:true,  text:"インターネットと直接つながるのは「配信の高速化」だけ", why:"公開サイトの基本は、オリジン（裏側）を直接さらさないこと。入口は配信に一本化する。", test:(adj,p)=> ("cdn" in p) && !!adj.net && adj.net.size===1 && adj.net.has("cdn")},
-    {must:true,  text:"配信の高速化 → 振り分け → 仮想サーバーの順につながっている", why:"客の流れは、配信で受けて、振り分けでさばいて、サーバーで処理する。", test:(adj,p)=> hasE(adj,"cdn","alb") && hasE(adj,"alb","ec2")},
-    {must:true,  text:"守りの壁が「振り分け」につながっている", why:"攻撃は、客が入ってくる振り分けのところで止める。", test:(adj,p)=> hasE(adj,"waf","alb")},
-    {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"問い合わせデータに触れるのは、処理するサーバーだけ。他のどこからも直接触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
-    {must:true,  text:"閉域接続（専用線）は使わない", why:"公開サイトに専用線は要らない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
-    {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"見張りは、守る対象につないで初めて意味がある。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")}
-  ]
-};
+const SHORT = {net:"ネット", src:"社内", corp:"社内", ai:"AI", cdn:"配信", waf:"壁", alb:"振分", ec2:"サーバ", rds:"DB", watch:"見張り", dx:"専用線", agg:"集計", pub:"公開用", dash:"画面", plink:"接続口", idc:"本人確認", trail:"証跡", igw:"入口"};
+const SLOT8 = [{x:112,y:52},{x:112,y:150},{x:112,y:248},{x:192,y:52},{x:192,y:150},{x:192,y:248},{x:272,y:100},{x:272,y:200}];
+const SLOT6 = [{x:112,y:52},{x:112,y:150},{x:112,y:248},{x:192,y:52},{x:192,y:150},{x:192,y:248}];
+const PRACS = [
+  {
+    id:"prac1", title:"実践編 シナリオ1 ― コーポレートサイトを公開しよう",
+    brief:"会社のコーポレートサイトを公開する。要件： <b>①外からの入口は1つに絞り、そこで攻撃を止める ②配信は速くする ③裏側のサーバーやデータは、外から直接触らせない ④問い合わせデータは一番守る場所へ</b>。",
+    fixtures:[{id:"net", label:"ネット", x:34, y:150}], slots:SLOT8,
+    hand:["cdn","waf","alb","ec2","rds","watch","dx"], budget:12, stars3:1,
+    rules:[
+      {must:true,  text:"インターネットと直接つながるのは「配信の高速化」だけ", why:"公開サイトの基本は、オリジン（裏側）を直接さらさないこと。入口は配信に一本化する。", test:(adj,p)=> ("cdn" in p) && !!adj.net && adj.net.size===1 && adj.net.has("cdn")},
+      {must:true,  text:"配信の高速化 → 振り分け → 仮想サーバーの順につながっている", why:"客の流れは、配信で受けて、振り分けでさばいて、サーバーで処理する。", test:(adj,p)=> hasE(adj,"cdn","alb") && hasE(adj,"alb","ec2")},
+      {must:true,  text:"守りの壁が「振り分け」につながっている", why:"攻撃は、客が入ってくる振り分けのところで止める。", test:(adj,p)=> hasE(adj,"waf","alb")},
+      {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"問い合わせデータに触れるのは、処理するサーバーだけ。他のどこからも直接触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
+      {must:true,  text:"閉域接続（専用線）は使わない", why:"公開サイトに専用線は要らない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+      {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"見張りは、守る対象につないで初めて意味がある。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")}
+    ]
+  },
+  {
+    id:"prac2", title:"実践編 シナリオ2 ― 社内ダッシュボードを社外に公開しよう",
+    brief:"社内の売上ダッシュボードを、取引先にも見せたいという要望が出た。要件： <b>①社内の生データは外に出さない ②公開用に整えたデータだけを見せる ③見る相手は本人確認を通す ④インターネットに公開されるのは画面だけにする</b>。",
+    fixtures:[{id:"src", label:"社内", x:34, y:150},{id:"net", label:"ネット", x:286, y:150}], slots:SLOT6,
+    hand:["agg","pub","dash","idc","waf","watch","dx"], budget:9, stars3:1,
+    rules:[
+      {must:true,  text:"社内と直接つながるのは「集計・匿名化」だけ", why:"生データが外へ出る道は、集計・匿名化を通る1本だけにする。社内の仕組みをそのまま見せない。", test:(adj,p)=> ("agg" in p) && !!adj.src && adj.src.size===1 && adj.src.has("agg")},
+      {must:true,  text:"集計・匿名化 → 公開用データ置き場の順につながっている", why:"整えたデータは、公開専用の置き場に分けて置く。", test:(adj,p)=> hasE(adj,"agg","pub")},
+      {must:true,  text:"画面の表示は「公開用データ置き場」とつながっている", why:"画面が見てよいのは、公開用に整えたデータだけ。", test:(adj,p)=> hasE(adj,"pub","dash")},
+      {must:true,  text:"インターネットと直接つながるのは「画面の表示」だけ", why:"公開されるのは画面だけ。データ置き場や集計の仕組みを、直接さらさない。", test:(adj,p)=> ("dash" in p) && !!adj.net && adj.net.size===1 && adj.net.has("dash")},
+      {must:true,  text:"本人確認の窓口が「画面の表示」につながっている", why:"取引先ごとに、本人確認を通した人だけが画面を見られるようにする。", test:(adj,p)=> hasE(adj,"idc","dash")},
+      {must:true,  text:"閉域接続（専用線）は使わない", why:"相手が大勢の社外公開に、専用線は引けない。要件に合わない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+      {must:false, text:"守りの壁が「画面の表示」につながっている", why:"公開する画面は、攻撃からも守る。", test:(adj,p)=> hasE(adj,"waf","dash")},
+      {must:false, text:"見張りが「公開用データ置き場」か「画面の表示」につながっている", why:"誰が何を見たかを、後から追えるようにする。", test:(adj,p)=> hasE(adj,"watch","pub") || hasE(adj,"watch","dash")}
+    ]
+  },
+  {
+    id:"prac3", title:"実践編 シナリオ3 ― 閉域のままAIを使おう",
+    brief:"生成AIを業務で使いたい。ただし会社のデータを外に漏らさないのが絶対条件。要件： <b>①AIサービスへは閉域の接続口だけでつなぐ（インターネット経由にしない）②社内データはアプリサーバーからだけ触る ③誰が何を聞いたかの証跡を残す</b>。",
+    fixtures:[{id:"corp", label:"社内", x:34, y:150},{id:"ai", label:"AI", x:286, y:150}], slots:SLOT6,
+    hand:["ec2","plink","rds","trail","watch","idc","igw"], budget:11, stars3:1,
+    rules:[
+      {must:true,  text:"社内と直接つながるのは「仮想サーバー」だけ", why:"社内から外へ出る道は、業務アプリのサーバー経由に一本化する。", test:(adj,p)=> ("ec2" in p) && !!adj.corp && adj.corp.size===1 && adj.corp.has("ec2")},
+      {must:true,  text:"仮想サーバー → 閉域の接続口 → AIサービスの順につながっている", why:"AIへは、閉域の接続口を通る専用の道だけで届くようにする。", test:(adj,p)=> hasE(adj,"ec2","plink") && hasE(adj,"plink","ai")},
+      {must:true,  text:"AIサービスと直接つながるのは「閉域の接続口」だけ", why:"AI側の入口も1つに絞る。ほかの道からは届かない。", test:(adj,p)=> ("plink" in p) && !!adj.ai && adj.ai.size===1 && adj.ai.has("plink")},
+      {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"社内データに触れるのは、業務アプリのサーバーだけ。AIからも直接は触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
+      {must:true,  text:"証跡の記録が「仮想サーバー」につながっている", why:"誰が・何をAIに聞いたかの記録は、AI利用の絶対条件。", test:(adj,p)=> hasE(adj,"trail","ec2")},
+      {must:true,  text:"インターネットの入口は作らない", why:"入口を作ると、閉域の意味がなくなる。AIへの道は閉域の接続口だけ。", test:(adj,p)=> !("igw" in p)},
+      {must:false, text:"見張りが「仮想サーバー」につながっている", why:"普通と違う使い方を、早く見つけるため。", test:(adj,p)=> hasE(adj,"watch","ec2")},
+      {must:false, text:"本人確認の窓口が「仮想サーバー」につながっている", why:"使う人を確かめてから、AIを使わせる。", test:(adj,p)=> hasE(adj,"idc","ec2")}
+    ]
+  }
+];
 function hasE(adj,a,b){ return !!(adj[a] && adj[a].has(b)); }
 function pracCost(place){ return Object.keys(place).reduce((s,id)=> s + ICARDS[id].cost, 0); }
-function pracJudge(adj, place, saveId, box){
-  const over = pracCost(place) > PRAC.budget;
-  const results = PRAC.rules.map(r=> ({r, ok: !!r.test(adj, place)}));
+function pracJudge(adj, place, scen, saveId, box){
+  const over = pracCost(place) > scen.budget;
+  const results = scen.rules.map(r=> ({r, ok: !!r.test(adj, place)}));
   const mustOk = results.filter(x=>x.r.must).every(x=>x.ok) && !over;
   const bonusOk = results.filter(x=>!x.r.must && x.ok).length;
   let stars = 0;
-  if(mustOk) stars = bonusOk >= PRAC.stars3? 3 : (bonusOk>=1? 2:1);
+  if(mustOk) stars = bonusOk >= scen.stars3? 3 : (bonusOk>=1? 2:1);
   if(mustOk){
     const prev = progress[saveId] || 0;
     if(stars > prev){ progress[saveId] = stars; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }catch(e){} }
   }
   let html = `<h3>${mustOk? "要件を満たした！":"まだ要件を満たしていない"}</h3>`;
   if(mustOk) html += `<div class="rstars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</div>`;
-  html += `<div class="rule"><span class="mk ${over? "ng":"ok"}">${over? "×":"○"}</span>予算 ${PRAC.budget} 以内におさめる<span class="tag">必須</span><span class="why">合計コスト ${pracCost(place)}。要件にない部品は、コストの無駄になる。</span></div>`;
+  html += `<div class="rule"><span class="mk ${over? "ng":"ok"}">${over? "×":"○"}</span>予算 ${scen.budget} 以内におさめる<span class="tag">必須</span><span class="why">合計コスト ${pracCost(place)}。要件にない部品は、コストの無駄になる。</span></div>`;
   results.forEach(({r,ok})=>{
     html += `<div class="rule"><span class="mk ${ok? "ok":"ng"}">${ok? "○":"×"}</span>${r.text}<span class="tag">${r.must? "必須":"加点"}</span><span class="why">${r.why}</span></div>`;
   });
@@ -737,13 +778,22 @@ function pracJudge(adj, place, saveId, box){
   box.scrollIntoView({behavior:"smooth", block:"start"});
 }
 function renderPrac(){
-  const g = progress["prac-g"] || 0, hx = progress["prac-h"] || 0;
-  $("#btn-prac-graph").innerHTML = `グラフ盤面で試す<span class="stars">${"★".repeat(g)}${"☆".repeat(3-g)}</span>`;
-  $("#btn-prac-hex").innerHTML = `ヘックス盤面で試す<span class="stars">${"★".repeat(hx)}${"☆".repeat(3-hx)}</span>`;
+  const list = $("#prac-list");
+  list.innerHTML = "";
+  PRACS.forEach((scen,i)=>{
+    const st = progress[scen.id] || 0;
+    const b = document.createElement("button");
+    b.className = "btn primary";
+    b.innerHTML = `${scen.title}<span class="stars">${"★".repeat(st)}${"☆".repeat(3-st)}</span>`;
+    b.addEventListener("click", ()=> startGraph(i));
+    list.appendChild(b);
+  });
+  const hx = progress["prac-h"] || 0;
+  $("#btn-prac-hex").innerHTML = `ヘックス盤面で試す（シナリオ1の比較用）<span class="stars">${"★".repeat(hx)}${"☆".repeat(3-hx)}</span>`;
 }
-function pracHandHTML(handEl, place, sel, onPick){
+function pracHandHTML(handEl, scen, place, sel, onPick){
   handEl.innerHTML = "";
-  PRAC.hand.filter(id=> !(id in place)).forEach(id=>{
+  scen.hand.filter(id=> !(id in place)).forEach(id=>{
     const wrap = document.createElement("div");
     wrap.innerHTML = icardHTML(id);
     const el = wrap.firstChild;
@@ -751,36 +801,33 @@ function pracHandHTML(handEl, place, sel, onPick){
     el.addEventListener("click", ()=> onPick(id));
     handEl.appendChild(el);
   });
-  if(PRAC.hand.every(id=> id in place)) handEl.innerHTML = `<p class="sub" style="margin:0">てもちのカードはありません</p>`;
+  if(scen.hand.every(id=> id in place)) handEl.innerHTML = `<p class="sub" style="margin:0">てもちのカードはありません</p>`;
 }
 
 /* ---------- GRAPH BOARD ---------- */
-const GNET = {x:34, y:150};
-const GSLOTS = [
-  {x:112,y:52},{x:112,y:150},{x:112,y:248},
-  {x:192,y:52},{x:192,y:150},{x:192,y:248},
-  {x:272,y:100},{x:272,y:200}
-];
-let gplace = {}, gedges = new Set(), gmode = "place", gsel = null, glink = null;
+let gscen = null, gscenIdx = 0, gplace = {}, gedges = new Set(), gmode = "place", gsel = null, glink = null;
 const ekey = (a,b)=> [a,b].sort().join("|");
 function gpos(node){
-  if(node==="net") return GNET;
+  const fx = gscen.fixtures.find(f=> f.id===node);
+  if(fx) return fx;
   const slot = gplace[node];
-  return slot!=null? GSLOTS[slot] : null;
+  return slot!=null? gscen.slots[slot] : null;
 }
+function gIsNode(node){ return gscen.fixtures.some(f=> f.id===node) || (node in gplace); }
 function gAdj(){
   const adj = {};
   const add = (a,b)=>{ (adj[a] = adj[a] || new Set()).add(b); };
   gedges.forEach(k=>{
     const [a,b] = k.split("|");
-    if(a==="net" || a in gplace) if(b==="net" || b in gplace){ add(a,b); add(b,a); }
+    if(gIsNode(a) && gIsNode(b)){ add(a,b); add(b,a); }
   });
   return adj;
 }
-function startGraph(){
+function startGraph(idx){
+  gscenIdx = idx; gscen = PRACS[idx];
   gplace = {}; gedges = new Set(); gmode = "place"; gsel = null; glink = null;
-  $("#gplay-title").textContent = PRAC.title + "（グラフ盤面）";
-  $("#gplay-brief").innerHTML = PRAC.brief;
+  $("#gplay-title").textContent = gscen.title + "（グラフ盤面）";
+  $("#gplay-brief").innerHTML = gscen.brief;
   $("#gresult").className = ""; $("#gresult").innerHTML = "";
   setGMode("place");
   renderGraph();
@@ -796,9 +843,9 @@ function setGMode(m){
   renderGraph();
 }
 function renderGraph(){
-  const cost = pracCost(gplace), over = cost > PRAC.budget;
+  const cost = pracCost(gplace), over = cost > gscen.budget;
   const bud = $("#gplay-budget");
-  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${PRAC.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${gscen.budget}</b>${over? " ― 予算オーバー！":""}`;
   bud.className = "budget" + (over? " over":"");
   let s = `<svg class="board" viewBox="0 0 320 300">`;
   gedges.forEach(k=>{
@@ -806,13 +853,15 @@ function renderGraph(){
     const pa = gpos(a), pb = gpos(b);
     if(pa && pb) s += `<line class="gedge" x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}"/>`;
   });
-  GSLOTS.forEach((sl,i)=>{
+  gscen.slots.forEach((sl,i)=>{
     if(!Object.values(gplace).includes(i))
       s += `<g class="gslot" data-slot="${i}"><circle cx="${sl.x}" cy="${sl.y}" r="25"/></g>`;
   });
-  s += `<g class="gnode netn ${glink==="net"? "sel":""}" data-node="net"><circle cx="${GNET.x}" cy="${GNET.y}" r="25"/><text x="${GNET.x}" y="${GNET.y+4}">ネット</text></g>`;
+  gscen.fixtures.forEach(fx=>{
+    s += `<g class="gnode netn ${glink===fx.id? "sel":""}" data-node="${fx.id}"><circle cx="${fx.x}" cy="${fx.y}" r="25"/><text x="${fx.x}" y="${fx.y+4}">${fx.label}</text></g>`;
+  });
   Object.keys(gplace).forEach(id=>{
-    const p = GSLOTS[gplace[id]];
+    const p = gscen.slots[gplace[id]];
     s += `<g class="gnode ${glink===id? "sel":""}" data-node="${id}"><circle cx="${p.x}" cy="${p.y}" r="25"/><text x="${p.x}" y="${p.y+4}">${SHORT[id]}</text></g>`;
   });
   s += `</svg>`;
@@ -827,7 +876,7 @@ function renderGraph(){
     el.addEventListener("click", ()=>{
       const node = el.dataset.node;
       if(gmode==="place"){
-        if(node!=="net" && node in gplace){
+        if(node in gplace){
           delete gplace[node];
           gedges.forEach(k=>{ if(k.split("|").includes(node)) gedges.delete(k); });
           renderGraph();
@@ -844,7 +893,7 @@ function renderGraph(){
       }
     });
   });
-  pracHandHTML($("#ghand"), gplace, gsel, id=>{ gsel = (gsel===id? null: id); renderGraph(); });
+  pracHandHTML($("#ghand"), gscen, gplace, gsel, id=>{ gsel = (gsel===id? null: id); renderGraph(); });
 }
 
 /* ---------- HEX BOARD ---------- */
@@ -886,16 +935,16 @@ function hAdj(){
 }
 function startHex(){
   hplace = {}; hsel = null;
-  $("#hplay-title").textContent = PRAC.title + "（ヘックス盤面）";
-  $("#hplay-brief").innerHTML = PRAC.brief;
+  $("#hplay-title").textContent = PRACS[0].title + "（ヘックス盤面）";
+  $("#hplay-brief").innerHTML = PRACS[0].brief;
   $("#hresult").className = ""; $("#hresult").innerHTML = "";
   renderHex();
   show("scr-hplay");
 }
 function renderHex(){
-  const cost = pracCost(hplace), over = cost > PRAC.budget;
+  const cost = pracCost(hplace), over = cost > PRACS[0].budget;
   const bud = $("#hplay-budget");
-  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${PRAC.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${PRACS[0].budget}</b>${over? " ― 予算オーバー！":""}`;
   bud.className = "budget" + (over? " over":"");
   const cellCard = {};
   Object.keys(hplace).forEach(id=> cellCard[hplace[id]] = id);
@@ -919,19 +968,18 @@ function renderHex(){
       else if(hsel && !(hsel in hplace)){ hplace[hsel] = cell; hsel = null; renderHex(); }
     });
   });
-  pracHandHTML($("#hhand"), hplace, hsel, id=>{ hsel = (hsel===id? null: id); renderHex(); });
+  pracHandHTML($("#hhand"), PRACS[0], hplace, hsel, id=>{ hsel = (hsel===id? null: id); renderHex(); });
 }
 
 /* ---------- wiring ---------- */
 $("#btn-mode-prac").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
 $("#btn-prac-back").addEventListener("click", ()=> show("scr-mode"));
-$("#btn-prac-graph").addEventListener("click", startGraph);
 $("#btn-prac-hex").addEventListener("click", startHex);
 $("#btn-gmode-place").addEventListener("click", ()=> setGMode("place"));
 $("#btn-gmode-link").addEventListener("click", ()=> setGMode("link"));
-$("#btn-gjudge").addEventListener("click", ()=> pracJudge(gAdj(), gplace, "prac-g", $("#gresult")));
-$("#btn-hjudge").addEventListener("click", ()=> pracJudge(hAdj(), hplace, "prac-h", $("#hresult")));
-$("#btn-greset").addEventListener("click", startGraph);
+$("#btn-gjudge").addEventListener("click", ()=> pracJudge(gAdj(), gplace, gscen, gscen.id, $("#gresult")));
+$("#btn-hjudge").addEventListener("click", ()=> pracJudge(hAdj(), hplace, PRACS[0], "prac-h", $("#hresult")));
+$("#btn-greset").addEventListener("click", ()=> startGraph(gscenIdx));
 $("#btn-hreset").addEventListener("click", startHex);
 $("#btn-gback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
 $("#btn-hback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
