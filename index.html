@@ -129,6 +129,8 @@
   .card.k-dns{border-top-color:#facc15;} .card.k-dx{border-top-color:#fb923c;}
   .card.k-plink{border-top-color:#f472b6;} .card.k-trail{border-top-color:#94a3b8;}
   .card.k-idc{border-top-color:#38bdf8;} .card.k-ava{border-top-color:#4ade80;}
+  .card.k-cdn{border-top-color:#818cf8;} .card.k-ddb{border-top-color:#a78bfa;}
+  .card.k-sqs{border-top-color:#facc15;} .card.k-pay{border-top-color:#4ade80;}
 </style>
 </head>
 <body>
@@ -139,7 +141,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.3 — 基礎編＋入門編</p>
+    <p class="ver">CLOUDSMITH prototype v0.4 — 基礎編＋入門編</p>
   </section>
 
   <!-- MODE SELECT -->
@@ -180,7 +182,7 @@
   <!-- INTRO MISSION SELECT -->
   <section id="scr-iselect" class="screen">
     <h2>入門編 ― 機能カード（AWS）</h2>
-    <p class="sub">カードは「機能名」が主役で、対応する AWS のサービス名を小さく併記しています。カードを選んで、正しい層（ゾーン）に置いてください。</p>
+    <p class="sub">カードは「機能名」が主役で、対応する AWS のサービス名を小さく併記しています。カードを選んで、正しい層（ゾーン）に置いてください。ミッション1〜3が本線、最後が別線（ECサイト構築）です。</p>
     <div id="imission-list"></div>
     <button class="btn" id="btn-iselect-back">編の選択へもどる</button>
   </section>
@@ -412,7 +414,11 @@ const ICARDS = {
   plink:{name:"閉域の接続口",         aws:"AWS PrivateLink",            cost:2, desc:"閉域のままサービスへつなぐ口"},
   trail:{name:"証跡の記録",           aws:"AWS CloudTrail",             cost:1, desc:"誰が・何をしたかの記録"},
   idc:  {name:"本人確認の窓口",       aws:"AWS IAM Identity Center",    cost:2, desc:"使う人が本人かどうかを確かめる"},
-  ava:  {name:"検証つき接続",         aws:"AWS Verified Access",        cost:3, desc:"本人と端末を確かめてから、必要なアプリにだけつなぐ"}
+  ava:  {name:"検証つき接続",         aws:"AWS Verified Access",        cost:3, desc:"本人と端末を確かめてから、必要なアプリにだけつなぐ"},
+  cdn:  {name:"配信の高速化",         aws:"Amazon CloudFront",          cost:2, desc:"ページや画像を、近い場所から速く届ける"},
+  ddb:  {name:"柔軟なデータベース",   aws:"Amazon DynamoDB",            cost:3, desc:"カタログやカートのような、形の柔軟なデータ向き"},
+  sqs:  {name:"順番待ちの列",         aws:"Amazon SQS",                 cost:1, desc:"注文が殺到しても、列で受けて順に処理する"},
+  pay:  {name:"決済の外部連携",       aws:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"}
 };
 const IMISSIONS = [
   {
@@ -481,6 +487,32 @@ const IMISSIONS = [
       {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"毎回確かめる仕組みは、記録があって初めて監査できる。", test:p=>p.trail==="all"},
       {must:false, text:"見張りを「全体にかける」に置く", why:"不審なアクセスの検知まで揃うと、守りが運用になる。", test:p=>p.watch==="all"},
       {must:false, text:"ファイル置き場を「アプリとデータ」に置く", why:"ファイルも、検証を通った人だけが届く場所へ。", test:p=>p.s3==="apps"}
+    ]
+  },
+  {
+    id:"ec1", title:"別線ミッション ― ECサイトを立ち上げよう",
+    fixture:"別線： ECサイト構築。お店なので「公開する」が前提。ただし決済とデータの守り方は別格。",
+    brief:"ネットのお店を開く。商品を見せて、注文を受けて、決済までつなぐ。<b>売るための速さ</b>と、<b>お金とデータの守り</b>を両立させること。",
+    zones:[
+      {id:"front", name:"お店の表側",     slots:3},
+      {id:"work",  name:"処理する層",     slots:3},
+      {id:"data",  name:"データを守る層", slots:3},
+      {id:"all",   name:"全体にかける",   slots:2}
+    ],
+    hand:["cdn","alb","waf","ec2","pay","sqs","rds","ddb","s3","iam","watch","dx"], budget:19, stars3:1,
+    rules:[
+      {must:true,  text:"配信の高速化は「お店の表側」に置く", why:"商品画像やページは、買い物客に近い場所から速く届ける。お店の速さは売上に直結する。", test:p=>p.cdn==="front"},
+      {must:true,  text:"振り分けは「お店の表側」に置く", why:"客のアクセスを最初に受けて、処理する層へ振り分ける。", test:p=>p.alb==="front"},
+      {must:true,  text:"守りの壁は「お店の表側」に置く", why:"公開するお店は狙われやすい。攻撃は表側で止める。", test:p=>p.waf==="front"},
+      {must:true,  text:"仮想サーバーは「処理する層」に置く", why:"注文や在庫の処理は、表側の奥で行う。", test:p=>p.ec2==="work"},
+      {must:true,  text:"決済の外部連携は「処理する層」に置く", why:"決済は専門の外部サービスに任せる。クレジットカード情報を自前で持たないのが、お店の鉄則。", test:p=>p.pay==="work"},
+      {must:true,  text:"データベースは「データを守る層」に置く", why:"注文や顧客の記録は、最も守るべきデータ。", test:p=>p.rds==="data"},
+      {must:true,  text:"柔軟なデータベースは「データを守る層」に置く", why:"商品カタログやカートは、形の変わりやすいデータ。注文データとは分けて置く。", test:p=>p.ddb==="data"},
+      {must:true,  text:"ファイル置き場は「データを守る層」に置く", why:"商品画像の置き場。配信は表側の高速化に任せ、元データは守る層へ。", test:p=>p.s3==="data"},
+      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"お店の運営権限は、全体で厳密に管理する。", test:p=>p.iam==="all"},
+      {must:true,  text:"閉域接続（専用線）は使わない", why:"世界中のお客に開く店に、専用線は要らない。高いだけの無駄なコストになる。", test:p=>!p.dx},
+      {must:false, text:"順番待ちの列を「処理する層」に置く", why:"セールで注文が殺到しても、列があれば落とさず順に処理できる。", test:p=>p.sqs==="work"},
+      {must:false, text:"見張りを「全体にかける」に置く", why:"売上と異常の両方を見張るのが、お店の運用。", test:p=>p.watch==="all"}
     ]
   }
 ];
