@@ -109,6 +109,25 @@
     .slot .card{min-height:78px;} .slot{min-height:78px;}
     .card .nm{font-size:12px;}
   }
+  /* intro: zone board */
+  #iresult{display:none; margin-top:16px; background:rgba(14,42,85,.92);
+    border:2px solid var(--amber); border-radius:10px; padding:14px;}
+  #iresult.show{display:block;}
+  #iresult h3{margin:0 0 6px; font-size:18px;}
+  #iresult .rstars{color:var(--amber); font-size:20px; letter-spacing:.15em;}
+  .zone{border:2px solid var(--line); border-radius:10px; padding:10px; margin:12px 0; background:rgba(14,42,85,.55);}
+  .zone h4{margin:0 0 8px; font-size:14px; color:#ffd9a0;}
+  .zone .zslots{display:flex; flex-wrap:wrap; gap:8px;}
+  .zone .slot{flex:0 0 calc(50% - 4px); min-height:96px;}
+  .zone .card{min-height:96px;}
+  .card .aws{font-size:10px; color:#7c5cd6; font-weight:700; margin-top:2px;}
+  .fixture{background:#06203f; border:2px dashed var(--teal); border-radius:10px; padding:9px 12px; color:var(--teal); font-size:13px; font-weight:700; margin:12px 0 0; line-height:1.6;}
+  .card.k-igw{border-top-color:#38bdf8;} .card.k-alb{border-top-color:#818cf8;}
+  .card.k-waf{border-top-color:#f87171;} .card.k-ec2{border-top-color:#4ade80;}
+  .card.k-rds{border-top-color:#a78bfa;} .card.k-s3{border-top-color:#2dd4bf;}
+  .card.k-iam{border-top-color:#f5a83d;} .card.k-watch{border-top-color:#94a3b8;}
+  .card.k-dns{border-top-color:#facc15;} .card.k-dx{border-top-color:#fb923c;}
+  .card.k-plink{border-top-color:#f472b6;} .card.k-trail{border-top-color:#94a3b8;}
 </style>
 </head>
 <body>
@@ -118,8 +137,19 @@
   <section id="scr-title" class="screen active">
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
-    <button class="btn primary" id="btn-start">基礎編をはじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.1 — 基礎編</p>
+    <button class="btn primary" id="btn-start">はじめる</button>
+    <p class="ver">CLOUDSMITH prototype v0.2 — 基礎編＋入門編</p>
+  </section>
+
+  <!-- MODE SELECT -->
+  <section id="scr-mode" class="screen">
+    <h2>編を選ぶ</h2>
+    <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学びます。</p>
+    <button class="btn primary" id="btn-mode-basics">基礎編 ― 概念カード</button>
+    <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS）</button>
+    <button class="btn" disabled>実践編 ― 準備中</button>
+    <button class="btn" disabled>研鑽編 ― 準備中</button>
+    <button class="btn" id="btn-mode-title">タイトルへもどる</button>
   </section>
 
   <!-- MISSION SELECT -->
@@ -144,6 +174,29 @@
     <button class="btn" id="btn-reset">並べ直す</button>
     <button class="btn" id="btn-to-select">ミッション選択へもどる</button>
     <div id="result"></div>
+  </section>
+
+  <!-- INTRO MISSION SELECT -->
+  <section id="scr-iselect" class="screen">
+    <h2>入門編 ― 機能カード（AWS）</h2>
+    <p class="sub">カードは「機能名」が主役で、対応する AWS のサービス名を小さく併記しています。カードを選んで、正しい層（ゾーン）に置いてください。</p>
+    <div id="imission-list"></div>
+    <button class="btn" id="btn-iselect-back">編の選択へもどる</button>
+  </section>
+
+  <!-- INTRO PLAY -->
+  <section id="scr-iplay" class="screen">
+    <h2 id="iplay-title"></h2>
+    <div class="brief" id="iplay-brief"></div>
+    <div class="fixture" id="iplay-fixture"></div>
+    <p class="budget" id="iplay-budget"></p>
+    <div id="izones"></div>
+    <p class="hand-label">てもちのカード（タップで選ぶ → ゾーンのあきマスをタップで置く／置いたカードのタップで戻す）</p>
+    <div class="hand" id="ihand"></div>
+    <button class="btn primary" id="btn-ijudge">判定する</button>
+    <button class="btn" id="btn-ireset">並べ直す</button>
+    <button class="btn" id="btn-iplay-back">ミッション選択へもどる</button>
+    <div id="iresult"></div>
   </section>
 
 </div>
@@ -335,11 +388,191 @@ function judge(){
   box.scrollIntoView({behavior:"smooth", block:"start"});
 }
 /* ---- wiring ---- */
-$("#btn-start").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
+$("#btn-start").addEventListener("click", ()=> show("scr-mode"));
 $("#btn-to-title").addEventListener("click", ()=> show("scr-title"));
 $("#btn-to-select").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
 $("#btn-reset").addEventListener("click", ()=>{ board = Array(SLOTS).fill(null); selected=null; $("#result").className=""; $("#result").innerHTML=""; renderPlay(); });
 $("#btn-judge").addEventListener("click", judge);
+</script>
+<script>
+"use strict";
+/* ============ INTRO: function cards (AWS) & zone board ============ */
+const ICARDS = {
+  igw:  {name:"インターネットの入口", aws:"Internet Gateway",           cost:1, desc:"外とつながる唯一の入口"},
+  alb:  {name:"振り分け",             aws:"Application Load Balancer",  cost:2, desc:"来た人を、空いている先へ振り分ける"},
+  waf:  {name:"守りの壁",             aws:"AWS WAF",                    cost:1, desc:"Webへの攻撃を入口で止める"},
+  ec2:  {name:"仮想サーバー",         aws:"Amazon EC2",                 cost:3, desc:"処理を行う汎用のサーバー"},
+  rds:  {name:"データベース",         aws:"Amazon RDS",                 cost:3, desc:"業務データを守って置く"},
+  s3:   {name:"ファイル置き場",       aws:"Amazon S3",                  cost:1, desc:"ファイルや画像の置き場"},
+  iam:  {name:"鍵の管理",             aws:"AWS IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
+  watch:{name:"見張り",               aws:"Amazon CloudWatch",          cost:1, desc:"状態を見張り、異常を知らせる"},
+  dns:  {name:"名前解決",             aws:"Amazon Route 53",            cost:1, desc:"名前から行き先を引く"},
+  dx:   {name:"閉域接続",             aws:"AWS Direct Connect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
+  plink:{name:"閉域の接続口",         aws:"AWS PrivateLink",            cost:2, desc:"閉域のままサービスへつなぐ口"},
+  trail:{name:"証跡の記録",           aws:"AWS CloudTrail",             cost:1, desc:"誰が・何をしたかの記録"}
+};
+const IMISSIONS = [
+  {
+    id:"im1", title:"入門ミッション1 ― 土台を作ろう",
+    fixture:"土台： 仮想ネットワーク（Amazon VPC）は用意済み。この中に層を作って配置する。",
+    brief:"会社の公開サイトと、その裏側の業務データを置く土台を作る。<b>公開する層／処理する層／データを守る層</b>に分け、全体にかける鍵と見張りも忘れずに。",
+    zones:[
+      {id:"pub",  name:"公開する層",     slots:3},
+      {id:"app",  name:"処理する層",     slots:2},
+      {id:"data", name:"データを守る層", slots:2},
+      {id:"all",  name:"全体にかける",   slots:3}
+    ],
+    hand:["igw","alb","waf","ec2","rds","s3","iam","watch","dns"], budget:14, stars3:1,
+    rules:[
+      {must:true,  text:"インターネットの入口は「公開する層」に置く", why:"外との入口は、公開する層にだけ作る。", test:p=>p.igw==="pub"},
+      {must:true,  text:"振り分けは「公開する層」に置く", why:"外から来た人を最初に受けるのは、公開する層の振り分け。", test:p=>p.alb==="pub"},
+      {must:true,  text:"守りの壁は「公開する層」に置く", why:"攻撃は入口で止める。壁は振り分けと同じ層が基本。", test:p=>p.waf==="pub"},
+      {must:true,  text:"仮想サーバーは「処理する層」に置く", why:"実際の処理は、外に直接出ない層で行う。", test:p=>p.ec2==="app"},
+      {must:true,  text:"データベースは「データを守る層」に置く", why:"業務データは最も奥の層へ。", test:p=>p.rds==="data"},
+      {must:true,  text:"ファイル置き場は「データを守る層」に置く", why:"ファイルもデータの一種。守る層に置く。", test:p=>p.s3==="data"},
+      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"鍵の管理は層ごとではなく、環境全体にかけるもの。", test:p=>p.iam==="all"},
+      {must:true,  text:"見張りは「全体にかける」に置く", why:"見張りの対象は全体。層の中に閉じ込めない。", test:p=>p.watch==="all"},
+      {must:false, text:"名前解決を「全体にかける」に置く", why:"名前解決は環境全体の案内役。置けると公開が安定する。", test:p=>p.dns==="all"}
+    ]
+  },
+  {
+    id:"im2", title:"入門ミッション2 ― 閉域でつなごう",
+    fixture:"社内ネットワーク（固定）は、すでに左側にあるものとして考える。インターネットは経由しない。",
+    brief:"社内システムとクラウドを、<b>外のインターネットを通さずに</b>つなぐ。公開のための入口は作らないこと。",
+    zones:[
+      {id:"link",  name:"つなぐ道",       slots:2},
+      {id:"cloud", name:"クラウドの内側", slots:3},
+      {id:"data",   name:"データを守る層", slots:2},
+      {id:"all",    name:"全体にかける",   slots:2}
+    ],
+    hand:["dx","plink","ec2","rds","iam","trail","igw","alb"], budget:14, stars3:1,
+    rules:[
+      {must:true,  text:"閉域接続は「つなぐ道」に置く", why:"社内とクラウドを結ぶ専用線が、閉域の本体。", test:p=>p.dx==="link"},
+      {must:true,  text:"インターネットの入口は作らない", why:"閉域なのに外の入口を開けると、閉域の意味がなくなる。", test:p=>!p.igw},
+      {must:true,  text:"公開向けの振り分けは置かない", why:"外から受ける前提の部品は、閉域の構成には要らない。", test:p=>!p.alb},
+      {must:true,  text:"閉域の接続口は「クラウドの内側」に置く", why:"専用線の先で、閉域のままサービスへつなぐ口。", test:p=>p.plink==="cloud"},
+      {must:true,  text:"仮想サーバーは「クラウドの内側」に置く", why:"処理はクラウドの内側で。外には出さない。", test:p=>p.ec2==="cloud"},
+      {must:true,  text:"データベースは「データを守る層」に置く", why:"閉域でも、データはさらに奥の層へ。", test:p=>p.rds==="data"},
+      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"閉域でも「誰が使えるか」の管理は全体にかける。", test:p=>p.iam==="all"},
+      {must:false, text:"証跡の記録を「全体にかける」に置く", why:"閉域こそ「誰が何をしたか」の証跡が効く。", test:p=>p.trail==="all"}
+    ]
+  }
+];
+let icur = 0, iplace = {}, isel = null;
+function icost(){ return Object.keys(iplace).reduce((s,id)=> s + ICARDS[id].cost, 0); }
+function ihandCards(){ return IMISSIONS[icur].hand.filter(id=> !(id in iplace)); }
+function zoneCount(zid){ return Object.values(iplace).filter(z=> z===zid).length; }
+function icardHTML(id){
+  const c = ICARDS[id];
+  return `<div class="card k-${id}" data-card="${id}">
+    <div class="nm">${c.name}</div><div class="aws">AWS: ${c.aws}</div>
+    <div class="ds">${c.desc}</div><div class="ct">コスト ${c.cost}</div></div>`;
+}
+function renderISelect(){
+  const list = $("#imission-list");
+  list.innerHTML = "";
+  IMISSIONS.forEach((m,i)=>{
+    const st = progress[m.id] || 0;
+    const btn = document.createElement("button");
+    btn.className = "btn";
+    btn.innerHTML = `${m.title}<span class="stars">${"★".repeat(st)}${"☆".repeat(3-st)}</span>`;
+    btn.addEventListener("click", ()=> startIMission(i));
+    list.appendChild(btn);
+  });
+}
+function startIMission(i){
+  icur = i; iplace = {}; isel = null;
+  const m = IMISSIONS[icur];
+  $("#iplay-title").textContent = m.title;
+  $("#iplay-brief").innerHTML = m.brief;
+  $("#iplay-fixture").textContent = m.fixture;
+  $("#iresult").className = ""; $("#iresult").innerHTML = "";
+  renderIPlay();
+  show("scr-iplay");
+}
+function renderIPlay(){
+  const m = IMISSIONS[icur];
+  const cost = icost(), over = cost > m.budget;
+  const bud = $("#iplay-budget");
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${m.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.className = "budget" + (over? " over":"");
+  const zw = $("#izones");
+  zw.innerHTML = "";
+  m.zones.forEach(z=>{
+    const panel = document.createElement("div");
+    panel.className = "zone";
+    panel.innerHTML = `<h4>${z.name}（${zoneCount(z.id)}/${z.slots}）</h4>`;
+    const slots = document.createElement("div");
+    slots.className = "zslots";
+    const inZone = Object.keys(iplace).filter(id=> iplace[id]===z.id);
+    inZone.forEach(id=>{
+      const slot = document.createElement("div");
+      slot.className = "slot filled";
+      slot.innerHTML = icardHTML(id);
+      slot.addEventListener("click", ()=>{ delete iplace[id]; isel=null; renderIPlay(); });
+      slots.appendChild(slot);
+    });
+    for(let k=inZone.length; k<z.slots; k++){
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.innerHTML = `<span class="empty-label">あき</span>`;
+      slot.addEventListener("click", ()=>{
+        if(isel && !(isel in iplace)){ iplace[isel]=z.id; isel=null; renderIPlay(); }
+      });
+      slots.appendChild(slot);
+    }
+    panel.appendChild(slots);
+    zw.appendChild(panel);
+  });
+  const hd = $("#ihand");
+  hd.innerHTML = "";
+  ihandCards().forEach(id=>{
+    const wrap = document.createElement("div");
+    wrap.innerHTML = icardHTML(id);
+    const el = wrap.firstChild;
+    if(isel===id) el.classList.add("sel");
+    el.addEventListener("click", ()=>{ isel = (isel===id? null: id); renderIPlay(); });
+    hd.appendChild(el);
+  });
+  if(ihandCards().length===0) hd.innerHTML = `<p class="sub" style="margin:0">てもちのカードはありません</p>`;
+}
+function ijudge(){
+  const m = IMISSIONS[icur];
+  const over = icost() > m.budget;
+  const results = m.rules.map(r=> ({r, ok: !!r.test(iplace)}));
+  const mustOk = results.filter(x=>x.r.must).every(x=>x.ok) && !over;
+  const bonusOk = results.filter(x=>!x.r.must && x.ok).length;
+  const bonusAll = results.filter(x=>!x.r.must).length;
+  let stars = 0;
+  if(mustOk){ const need = (m.stars3!=null? m.stars3 : bonusAll); stars = bonusOk>=need? 3 : (bonusOk>=1? 2:1); }
+  if(mustOk){
+    const prev = progress[m.id] || 0;
+    if(stars > prev){ progress[m.id] = stars; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }catch(e){} }
+  }
+  const box = $("#iresult");
+  let html = `<h3>${mustOk? "クリア！":"まだ条件を満たしていない"}</h3>`;
+  if(mustOk) html += `<div class="rstars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</div>`;
+  html += `<div class="rule"><span class="mk ${over? "ng":"ok"}">${over? "×":"○"}</span>予算 ${m.budget} 以内におさめる<span class="tag">必須</span><span class="why">合計コスト ${icost()}。強さとコストの両立が、良い構成の条件。</span></div>`;
+  results.forEach(({r,ok})=>{
+    html += `<div class="rule"><span class="mk ${ok? "ok":"ng"}">${ok? "○":"×"}</span>${r.text}<span class="tag">${r.must? "必須":"加点"}</span><span class="why">${r.why}</span></div>`;
+  });
+  if(mustOk && icur < IMISSIONS.length-1)
+    html += `<button class="btn primary" id="btn-inext">次のミッションへ</button>`;
+  if(mustOk && icur === IMISSIONS.length-1)
+    html += `<p class="sub" style="margin:10px 0 0">入門編の試作はここまで。おつかれさまでした。</p>`;
+  box.innerHTML = html;
+  box.className = "show";
+  const nb = $("#btn-inext");
+  if(nb) nb.addEventListener("click", ()=> startIMission(icur+1));
+  box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+$("#btn-mode-basics").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
+$("#btn-mode-intro").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
+$("#btn-mode-title").addEventListener("click", ()=> show("scr-title"));
+$("#btn-iselect-back").addEventListener("click", ()=> show("scr-mode"));
+$("#btn-iplay-back").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
+$("#btn-ireset").addEventListener("click", ()=>{ iplace={}; isel=null; $("#iresult").className=""; $("#iresult").innerHTML=""; renderIPlay(); });
+$("#btn-ijudge").addEventListener("click", ijudge);
 </script>
 </body>
 </html>
