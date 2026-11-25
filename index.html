@@ -185,7 +185,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.12 — 全編にコンテンツ追加と見直し</p>
+    <p class="ver">CLOUDSMITH prototype v0.12.1 — 商標表記の調整</p>
     <p class="ver" style="margin-top:6px">非公式の学習用ゲームです。登場するサービス名は各社の商標であり、各社との提携関係はありません。</p>
   </section>
 
@@ -194,9 +194,9 @@
     <h2>編を選ぶ</h2>
     <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学び、実践編で「最適な構成」を組み立て、研鑽編で「事故への対応」を練習します。</p>
     <button class="btn primary" id="btn-mode-basics">基礎編 ― 概念カード</button>
-    <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS／Azure／GCP）</button>
-    <button class="btn primary" id="btn-mode-prac">実践編 ― グラフ盤面（AWS／Azure／GCP）</button>
-    <button class="btn primary" id="btn-mode-lab">研鑽編 ― インシデント対応（AWS／Azure／GCP）</button>
+    <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS／Azure／Google Cloud）</button>
+    <button class="btn primary" id="btn-mode-prac">実践編 ― グラフ盤面（AWS／Azure／Google Cloud）</button>
+    <button class="btn primary" id="btn-mode-lab">研鑽編 ― インシデント対応（AWS／Azure／Google Cloud）</button>
     <button class="btn" id="btn-mode-title">タイトルへもどる</button>
   </section>
 
@@ -230,7 +230,7 @@
     <p class="sub">問題はどのクラウドも原則同じです。カードに併記されるサービス名が、選んだクラウドのものになります。</p>
     <button class="btn primary" id="btn-ed-aws">AWS編</button>
     <button class="btn primary" id="btn-ed-azure">Azure編</button>
-    <button class="btn primary" id="btn-ed-gcp">GCP編</button>
+    <button class="btn primary" id="btn-ed-gcp">Google Cloud編</button>
     <button class="btn" id="btn-ed-back">編の選択へもどる</button>
   </section>
 
@@ -422,7 +422,7 @@ let cur = 0;                 // current mission index
 let board = Array(SLOTS).fill(null);
 let selected = null;         // selected cardId from hand
 const SAVE_KEY = "cloudsmith-basics-v1";
-const CLOUD_LABEL = {aws:"AWS", azure:"Azure", gcp:"GCP"};
+const CLOUD_LABEL = {aws:"AWS", azure:"Azure", gcp:"Google Cloud"};
 let cloud = "aws";
 try{ const savedCloud = localStorage.getItem("cloudsmith-cloud-v1"); if(savedCloud && CLOUD_LABEL[savedCloud]) cloud = savedCloud; }catch(e){}
 let editionTarget = "intro";
@@ -559,7 +559,7 @@ const ICARDS = {
   waf:  {name:"守りの壁",             aws:"AWS WAF", azure:"Azure Web Application Firewall", gcp:"Google Cloud Armor",                    cost:1, desc:"Webへの攻撃を入口で止める"},
   ec2:  {name:"仮想サーバー",         aws:"Amazon EC2", azure:"Azure Virtual Machines", gcp:"Compute Engine",                 cost:3, desc:"処理を行う汎用のサーバー"},
   rds:  {name:"データベース",         aws:"Amazon RDS", azure:"Azure SQL Database", gcp:"Cloud SQL",                 cost:3, desc:"業務データを守って置く"},
-  s3:   {name:"ファイル置き場",       aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Cloud Storage",                  cost:1, desc:"ファイルや画像の置き場"},
+  s3:   {name:"ファイル置き場",       aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Google Cloud Storage",                  cost:1, desc:"ファイルや画像の置き場"},
   iam:  {name:"鍵の管理",             aws:"AWS IAM", azure:"Azure RBAC", gcp:"Cloud IAM",                    cost:1, desc:"誰が・何をできるかを決める"},
   watch:{name:"見張り",               aws:"Amazon CloudWatch", azure:"Azure Monitor", gcp:"Cloud Monitoring",          cost:1, desc:"状態を見張り、異常を知らせる"},
   dns:  {name:"名前解決",             aws:"Amazon Route 53", azure:"Azure DNS", gcp:"Cloud DNS",            cost:1, desc:"名前から行き先を引く"},
@@ -573,7 +573,7 @@ const ICARDS = {
   sqs:  {name:"順番待ちの列",         aws:"Amazon SQS", azure:"Azure Service Bus", gcp:"Pub/Sub",                 cost:1, desc:"注文が殺到しても、列で受けて順に処理する"},
   pay:  {name:"決済の外部連携",       aws:"外部サービス", azure:"外部サービス", gcp:"外部サービス",               cost:2, desc:"決済は専門の外部サービスへ。カード情報は自前で持たない"},
   agg:  {name:"集計・匿名化",         aws:"AWS Glue", azure:"Azure Data Factory", gcp:"Dataflow",                   cost:2, desc:"生データを、集計して個人が分からない形に変える"},
-  pub:  {name:"公開用データ置き場",   aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Cloud Storage",                  cost:1, desc:"公開してよい形になったデータだけを置く"},
+  pub:  {name:"公開用データ置き場",   aws:"Amazon S3", azure:"Azure Blob Storage", gcp:"Google Cloud Storage",                  cost:1, desc:"公開してよい形になったデータだけを置く"},
   dash: {name:"画面の表示",           aws:"Amazon QuickSight", azure:"Microsoft Power BI", gcp:"Looker Studio",          cost:3, desc:"ダッシュボードの画面そのもの"},
   backup:{name:"バックアップ",        aws:"AWS Backup", azure:"Azure Backup", gcp:"Backup and DR",                 cost:2, desc:"定期的に写しを取り、壊れても戻せるようにする"},
   api:  {name:"連携の窓口",           aws:"Amazon API Gateway", azure:"Azure API Management", gcp:"Apigee",          cost:2, desc:"外部サービスとの受け渡しを、一か所に絞る窓口"},
