@@ -128,6 +128,7 @@
   .card.k-iam{border-top-color:#f5a83d;} .card.k-watch{border-top-color:#94a3b8;}
   .card.k-dns{border-top-color:#facc15;} .card.k-dx{border-top-color:#fb923c;}
   .card.k-plink{border-top-color:#f472b6;} .card.k-trail{border-top-color:#94a3b8;}
+  .card.k-idc{border-top-color:#38bdf8;} .card.k-ava{border-top-color:#4ade80;}
 </style>
 </head>
 <body>
@@ -138,7 +139,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.2 — 基礎編＋入門編</p>
+    <p class="ver">CLOUDSMITH prototype v0.3 — 基礎編＋入門編</p>
   </section>
 
   <!-- MODE SELECT -->
@@ -409,7 +410,9 @@ const ICARDS = {
   dns:  {name:"名前解決",             aws:"Amazon Route 53",            cost:1, desc:"名前から行き先を引く"},
   dx:   {name:"閉域接続",             aws:"AWS Direct Connect",         cost:4, desc:"社内とクラウドを結ぶ専用線"},
   plink:{name:"閉域の接続口",         aws:"AWS PrivateLink",            cost:2, desc:"閉域のままサービスへつなぐ口"},
-  trail:{name:"証跡の記録",           aws:"AWS CloudTrail",             cost:1, desc:"誰が・何をしたかの記録"}
+  trail:{name:"証跡の記録",           aws:"AWS CloudTrail",             cost:1, desc:"誰が・何をしたかの記録"},
+  idc:  {name:"本人確認の窓口",       aws:"AWS IAM Identity Center",    cost:2, desc:"使う人が本人かどうかを確かめる"},
+  ava:  {name:"検証つき接続",         aws:"AWS Verified Access",        cost:3, desc:"本人と端末を確かめてから、必要なアプリにだけつなぐ"}
 };
 const IMISSIONS = [
   {
@@ -455,6 +458,29 @@ const IMISSIONS = [
       {must:true,  text:"データベースは「データを守る層」に置く", why:"閉域でも、データはさらに奥の層へ。", test:p=>p.rds==="data"},
       {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"閉域でも「誰が使えるか」の管理は全体にかける。", test:p=>p.iam==="all"},
       {must:false, text:"証跡の記録を「全体にかける」に置く", why:"閉域こそ「誰が何をしたか」の証跡が効く。", test:p=>p.trail==="all"}
+    ]
+  },
+  {
+    id:"im3", title:"入門ミッション3 ― ゼロトラストで守ろう",
+    fixture:"前提： 信用できる「内側」は存在しない。すべてのアクセスを、毎回確かめる。",
+    brief:"拠点も人もバラバラな会社で、社内システムへ安全にアクセスさせたい。<b>「中に入れば安全」という考え方は捨てる</b>こと。毎回、本人と端末を確かめてから、必要なアプリにだけ通す。",
+    zones:[
+      {id:"verify", name:"本人と端末の確認", slots:2},
+      {id:"apps",   name:"アプリとデータ",   slots:3},
+      {id:"all",    name:"全体にかける",     slots:3}
+    ],
+    hand:["idc","ava","ec2","rds","s3","iam","trail","watch","dx","igw"], budget:14, stars3:1,
+    rules:[
+      {must:true,  text:"本人確認の窓口は「本人と端末の確認」に置く", why:"すべての入口で、まず「誰か」を確かめるのがゼロトラストの出発点。", test:p=>p.idc==="verify"},
+      {must:true,  text:"検証つき接続は「本人と端末の確認」に置く", why:"本人と端末の両方を確かめてから、必要なアプリにだけつなぐ。場所では信用しない。", test:p=>p.ava==="verify"},
+      {must:true,  text:"閉域接続（専用線）は前提にしない", why:"専用線は「線の内側を信用する」発想。拠点がバラバラな働き方には合わない。", test:p=>!p.dx},
+      {must:true,  text:"インターネットの入口は作らない", why:"アプリをネットワークの入口に直接さらさない。アクセスは検証つき接続を通す。", test:p=>!p.igw},
+      {must:true,  text:"仮想サーバーは「アプリとデータ」に置く", why:"アプリは、検証を通った人だけが届く場所に置く。", test:p=>p.ec2==="apps"},
+      {must:true,  text:"データベースは「アプリとデータ」に置く", why:"データも同じく、検証なしでは届かない場所へ。", test:p=>p.rds==="apps"},
+      {must:true,  text:"鍵の管理は「全体にかける」に置く", why:"「何をしてよいか」の権限は、環境全体で細かく決める。", test:p=>p.iam==="all"},
+      {must:true,  text:"証跡の記録は「全体にかける」に置く", why:"毎回確かめる仕組みは、記録があって初めて監査できる。", test:p=>p.trail==="all"},
+      {must:false, text:"見張りを「全体にかける」に置く", why:"不審なアクセスの検知まで揃うと、守りが運用になる。", test:p=>p.watch==="all"},
+      {must:false, text:"ファイル置き場を「アプリとデータ」に置く", why:"ファイルも、検証を通った人だけが届く場所へ。", test:p=>p.s3==="apps"}
     ]
   }
 ];
