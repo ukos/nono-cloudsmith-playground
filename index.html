@@ -131,6 +131,27 @@
   .card.k-idc{border-top-color:#38bdf8;} .card.k-ava{border-top-color:#4ade80;}
   .card.k-cdn{border-top-color:#818cf8;} .card.k-ddb{border-top-color:#a78bfa;}
   .card.k-sqs{border-top-color:#facc15;} .card.k-pay{border-top-color:#4ade80;}
+  #gresult, #hresult{display:none; margin-top:16px; background:rgba(14,42,85,.92); border:2px solid var(--amber); border-radius:10px; padding:14px;}
+  #gresult.show, #hresult.show{display:block;}
+  #gresult h3, #hresult h3{margin:0 0 6px; font-size:18px;}
+  #gresult .rstars, #hresult .rstars{color:var(--amber); font-size:20px; letter-spacing:.15em;}
+  .rowbtns{display:flex; gap:8px;}
+  .rowbtns .btn{flex:1; text-align:center;}
+  .rowbtns .btn.on{border-color:var(--amber); color:#ffd9a0;}
+  svg.board{width:100%; height:auto; display:block; background:rgba(6,32,63,.5); border:2px solid var(--line); border-radius:10px; margin-top:12px;}
+  .gnode{cursor:pointer;}
+  .gnode circle{fill:#12315f; stroke:#2b5ea7; stroke-width:2;}
+  .gnode text{fill:#eaf4ff; font-size:11px; font-weight:700; text-anchor:middle; pointer-events:none;}
+  .gnode.netn circle{fill:#06203f; stroke:#39d5e8; stroke-dasharray:4 3;}
+  .gnode.sel circle{stroke:#f5a83d; stroke-width:3.5;}
+  .gslot{cursor:pointer;}
+  .gslot circle{fill:rgba(255,255,255,.04); stroke:rgba(157,185,221,.5); stroke-width:1.5; stroke-dasharray:4 3;}
+  .gedge{stroke:#39d5e8; stroke-width:2.5; opacity:.85;}
+  .hexcell{cursor:pointer;}
+  .hexcell polygon{fill:rgba(255,255,255,.04); stroke:rgba(157,185,221,.55); stroke-width:1.5;}
+  .hexcell.full polygon{fill:#12315f; stroke:#2b5ea7; stroke-width:2;}
+  .hexcell.netn polygon{fill:#06203f; stroke:#39d5e8; stroke-dasharray:4 3;}
+  .hexcell text{fill:#eaf4ff; font-size:10.5px; font-weight:700; text-anchor:middle; pointer-events:none;}
 </style>
 </head>
 <body>
@@ -141,7 +162,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.4 — 基礎編＋入門編</p>
+    <p class="ver">CLOUDSMITH prototype v0.5 — 基礎編＋入門編＋実践編試作</p>
   </section>
 
   <!-- MODE SELECT -->
@@ -150,7 +171,7 @@
     <p class="sub">基礎編で「考え方」を、入門編で「実際のサービスの名前と役割」を学びます。</p>
     <button class="btn primary" id="btn-mode-basics">基礎編 ― 概念カード</button>
     <button class="btn primary" id="btn-mode-intro">入門編 ― 機能カード（AWS）</button>
-    <button class="btn" disabled>実践編 ― 準備中</button>
+    <button class="btn primary" id="btn-mode-prac">実践編 ― 盤面の比較試作</button>
     <button class="btn" disabled>研鑽編 ― 準備中</button>
     <button class="btn" id="btn-mode-title">タイトルへもどる</button>
   </section>
@@ -200,6 +221,49 @@
     <button class="btn" id="btn-ireset">並べ直す</button>
     <button class="btn" id="btn-iplay-back">ミッション選択へもどる</button>
     <div id="iresult"></div>
+  </section>
+
+  <!-- PRACTICAL: BOARD COMPARISON -->
+  <section id="scr-prac" class="screen">
+    <h2>実践編 ― 盤面の比較試作</h2>
+    <p class="sub">同じシナリオ・同じ判定ルールを、2種類の盤面で試せます。グラフ盤面は「置いて、線でつなぐ」。ヘックス盤面は「隣り合えばつながっている」という約束です。組み立てやすさと、つながりの分かりやすさを比べてください。</p>
+    <button class="btn primary" id="btn-prac-graph">グラフ盤面で試す</button>
+    <button class="btn primary" id="btn-prac-hex">ヘックス盤面で試す</button>
+    <button class="btn" id="btn-prac-back">編の選択へもどる</button>
+  </section>
+
+  <!-- GRAPH PLAY -->
+  <section id="scr-gplay" class="screen">
+    <h2 id="gplay-title"></h2>
+    <div class="brief" id="gplay-brief"></div>
+    <p class="budget" id="gplay-budget"></p>
+    <div class="rowbtns" style="margin-top:12px">
+      <button class="btn on" id="btn-gmode-place">配置モード</button>
+      <button class="btn" id="btn-gmode-link">接続モード</button>
+    </div>
+    <p class="sub" id="gmode-note" style="margin-top:8px">配置モード： カードを選んでマスに置く。置いたカードのタップで戻す。</p>
+    <div id="gboard"></div>
+    <p class="hand-label">てもちのカード</p>
+    <div class="hand" id="ghand"></div>
+    <button class="btn primary" id="btn-gjudge">判定する</button>
+    <button class="btn" id="btn-greset">やり直す</button>
+    <button class="btn" id="btn-gback">盤面の選択へもどる</button>
+    <div id="gresult"></div>
+  </section>
+
+  <!-- HEX PLAY -->
+  <section id="scr-hplay" class="screen">
+    <h2 id="hplay-title"></h2>
+    <div class="brief" id="hplay-brief"></div>
+    <p class="budget" id="hplay-budget"></p>
+    <p class="sub" style="margin-top:8px">カードを選んでヘックス（六角形のマス）に置くと、隣り合ったもの同士が自動でつながります。置いたカードのタップで戻します。</p>
+    <div id="hboard"></div>
+    <p class="hand-label">てもちのカード</p>
+    <div class="hand" id="hhand"></div>
+    <button class="btn primary" id="btn-hjudge">判定する</button>
+    <button class="btn" id="btn-hreset">やり直す</button>
+    <button class="btn" id="btn-hback">盤面の選択へもどる</button>
+    <div id="hresult"></div>
   </section>
 
 </div>
@@ -631,6 +695,246 @@ $("#btn-iselect-back").addEventListener("click", ()=> show("scr-mode"));
 $("#btn-iplay-back").addEventListener("click", ()=>{ renderISelect(); show("scr-iselect"); });
 $("#btn-ireset").addEventListener("click", ()=>{ iplace={}; isel=null; $("#iresult").className=""; $("#iresult").innerHTML=""; renderIPlay(); });
 $("#btn-ijudge").addEventListener("click", ijudge);
+</script>
+<script>
+"use strict";
+/* ============ PRACTICAL PROTOTYPE: one scenario, two boards ============ */
+const SHORT = {net:"ネット", cdn:"配信", waf:"壁", alb:"振分", ec2:"サーバ", rds:"DB", watch:"見張り", dx:"専用線"};
+const PRAC = {
+  title:"実践編 試作 ― コーポレートサイトを公開しよう",
+  brief:"会社のコーポレートサイトを公開する。要件： <b>①外からの入口は1つに絞り、そこで攻撃を止める ②配信は速くする ③裏側のサーバーやデータは、外から直接触らせない ④問い合わせデータは一番守る場所へ</b>。",
+  hand:["cdn","waf","alb","ec2","rds","watch","dx"], budget:12, stars3:1,
+  rules:[
+    {must:true,  text:"インターネットと直接つながるのは「配信の高速化」だけ", why:"公開サイトの基本は、オリジン（裏側）を直接さらさないこと。入口は配信に一本化する。", test:(adj,p)=> ("cdn" in p) && !!adj.net && adj.net.size===1 && adj.net.has("cdn")},
+    {must:true,  text:"配信の高速化 → 振り分け → 仮想サーバーの順につながっている", why:"客の流れは、配信で受けて、振り分けでさばいて、サーバーで処理する。", test:(adj,p)=> hasE(adj,"cdn","alb") && hasE(adj,"alb","ec2")},
+    {must:true,  text:"守りの壁が「振り分け」につながっている", why:"攻撃は、客が入ってくる振り分けのところで止める。", test:(adj,p)=> hasE(adj,"waf","alb")},
+    {must:true,  text:"データベースは「仮想サーバー」とだけつながっている", why:"問い合わせデータに触れるのは、処理するサーバーだけ。他のどこからも直接触らせない。", test:(adj,p)=> ("rds" in p) && !!adj.rds && adj.rds.size===1 && adj.rds.has("ec2")},
+    {must:true,  text:"閉域接続（専用線）は使わない", why:"公開サイトに専用線は要らない。要件にない部品は置かない。", test:(adj,p)=> !("dx" in p)},
+    {must:false, text:"見張りが「仮想サーバー」か「データベース」につながっている", why:"見張りは、守る対象につないで初めて意味がある。", test:(adj,p)=> hasE(adj,"watch","ec2") || hasE(adj,"watch","rds")}
+  ]
+};
+function hasE(adj,a,b){ return !!(adj[a] && adj[a].has(b)); }
+function pracCost(place){ return Object.keys(place).reduce((s,id)=> s + ICARDS[id].cost, 0); }
+function pracJudge(adj, place, saveId, box){
+  const over = pracCost(place) > PRAC.budget;
+  const results = PRAC.rules.map(r=> ({r, ok: !!r.test(adj, place)}));
+  const mustOk = results.filter(x=>x.r.must).every(x=>x.ok) && !over;
+  const bonusOk = results.filter(x=>!x.r.must && x.ok).length;
+  let stars = 0;
+  if(mustOk) stars = bonusOk >= PRAC.stars3? 3 : (bonusOk>=1? 2:1);
+  if(mustOk){
+    const prev = progress[saveId] || 0;
+    if(stars > prev){ progress[saveId] = stars; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }catch(e){} }
+  }
+  let html = `<h3>${mustOk? "要件を満たした！":"まだ要件を満たしていない"}</h3>`;
+  if(mustOk) html += `<div class="rstars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</div>`;
+  html += `<div class="rule"><span class="mk ${over? "ng":"ok"}">${over? "×":"○"}</span>予算 ${PRAC.budget} 以内におさめる<span class="tag">必須</span><span class="why">合計コスト ${pracCost(place)}。要件にない部品は、コストの無駄になる。</span></div>`;
+  results.forEach(({r,ok})=>{
+    html += `<div class="rule"><span class="mk ${ok? "ok":"ng"}">${ok? "○":"×"}</span>${r.text}<span class="tag">${r.must? "必須":"加点"}</span><span class="why">${r.why}</span></div>`;
+  });
+  box.innerHTML = html;
+  box.className = "show";
+  box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+function renderPrac(){
+  const g = progress["prac-g"] || 0, hx = progress["prac-h"] || 0;
+  $("#btn-prac-graph").innerHTML = `グラフ盤面で試す<span class="stars">${"★".repeat(g)}${"☆".repeat(3-g)}</span>`;
+  $("#btn-prac-hex").innerHTML = `ヘックス盤面で試す<span class="stars">${"★".repeat(hx)}${"☆".repeat(3-hx)}</span>`;
+}
+function pracHandHTML(handEl, place, sel, onPick){
+  handEl.innerHTML = "";
+  PRAC.hand.filter(id=> !(id in place)).forEach(id=>{
+    const wrap = document.createElement("div");
+    wrap.innerHTML = icardHTML(id);
+    const el = wrap.firstChild;
+    if(sel===id) el.classList.add("sel");
+    el.addEventListener("click", ()=> onPick(id));
+    handEl.appendChild(el);
+  });
+  if(PRAC.hand.every(id=> id in place)) handEl.innerHTML = `<p class="sub" style="margin:0">てもちのカードはありません</p>`;
+}
+
+/* ---------- GRAPH BOARD ---------- */
+const GNET = {x:34, y:150};
+const GSLOTS = [
+  {x:112,y:52},{x:112,y:150},{x:112,y:248},
+  {x:192,y:52},{x:192,y:150},{x:192,y:248},
+  {x:272,y:100},{x:272,y:200}
+];
+let gplace = {}, gedges = new Set(), gmode = "place", gsel = null, glink = null;
+const ekey = (a,b)=> [a,b].sort().join("|");
+function gpos(node){
+  if(node==="net") return GNET;
+  const slot = gplace[node];
+  return slot!=null? GSLOTS[slot] : null;
+}
+function gAdj(){
+  const adj = {};
+  const add = (a,b)=>{ (adj[a] = adj[a] || new Set()).add(b); };
+  gedges.forEach(k=>{
+    const [a,b] = k.split("|");
+    if(a==="net" || a in gplace) if(b==="net" || b in gplace){ add(a,b); add(b,a); }
+  });
+  return adj;
+}
+function startGraph(){
+  gplace = {}; gedges = new Set(); gmode = "place"; gsel = null; glink = null;
+  $("#gplay-title").textContent = PRAC.title + "（グラフ盤面）";
+  $("#gplay-brief").innerHTML = PRAC.brief;
+  $("#gresult").className = ""; $("#gresult").innerHTML = "";
+  setGMode("place");
+  renderGraph();
+  show("scr-gplay");
+}
+function setGMode(m){
+  gmode = m; glink = null;
+  $("#btn-gmode-place").classList.toggle("on", m==="place");
+  $("#btn-gmode-link").classList.toggle("on", m==="link");
+  $("#gmode-note").textContent = m==="place"
+    ? "配置モード： カードを選んでマスに置く。置いたカードのタップで戻す。"
+    : "接続モード： ノードを2つタップすると、線を引く／消す。";
+  renderGraph();
+}
+function renderGraph(){
+  const cost = pracCost(gplace), over = cost > PRAC.budget;
+  const bud = $("#gplay-budget");
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${PRAC.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.className = "budget" + (over? " over":"");
+  let s = `<svg class="board" viewBox="0 0 320 300">`;
+  gedges.forEach(k=>{
+    const [a,b] = k.split("|");
+    const pa = gpos(a), pb = gpos(b);
+    if(pa && pb) s += `<line class="gedge" x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}"/>`;
+  });
+  GSLOTS.forEach((sl,i)=>{
+    if(!Object.values(gplace).includes(i))
+      s += `<g class="gslot" data-slot="${i}"><circle cx="${sl.x}" cy="${sl.y}" r="25"/></g>`;
+  });
+  s += `<g class="gnode netn ${glink==="net"? "sel":""}" data-node="net"><circle cx="${GNET.x}" cy="${GNET.y}" r="25"/><text x="${GNET.x}" y="${GNET.y+4}">ネット</text></g>`;
+  Object.keys(gplace).forEach(id=>{
+    const p = GSLOTS[gplace[id]];
+    s += `<g class="gnode ${glink===id? "sel":""}" data-node="${id}"><circle cx="${p.x}" cy="${p.y}" r="25"/><text x="${p.x}" y="${p.y+4}">${SHORT[id]}</text></g>`;
+  });
+  s += `</svg>`;
+  const bd = $("#gboard");
+  bd.innerHTML = s;
+  bd.querySelectorAll(".gslot").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      if(gmode==="place" && gsel && !(gsel in gplace)){ gplace[gsel] = +el.dataset.slot; gsel = null; renderGraph(); }
+    });
+  });
+  bd.querySelectorAll(".gnode").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const node = el.dataset.node;
+      if(gmode==="place"){
+        if(node!=="net" && node in gplace){
+          delete gplace[node];
+          gedges.forEach(k=>{ if(k.split("|").includes(node)) gedges.delete(k); });
+          renderGraph();
+        }
+      }else{
+        if(glink===null){ glink = node; }
+        else if(glink===node){ glink = null; }
+        else{
+          const k = ekey(glink, node);
+          if(gedges.has(k)) gedges.delete(k); else gedges.add(k);
+          glink = null;
+        }
+        renderGraph();
+      }
+    });
+  });
+  pracHandHTML($("#ghand"), gplace, gsel, id=>{ gsel = (gsel===id? null: id); renderGraph(); });
+}
+
+/* ---------- HEX BOARD ---------- */
+const HSZ = 30;
+const HCELLS = [];
+for(let r=0; r<3; r++) for(let c=0; c<5; c++)
+  HCELLS.push({x: 38 + c*46, y: 40 + r*50 + (c%2? 25:0)});
+const HNET_CELL = 5; /* row1, col0 */
+function hexPoints(cx, cy){
+  const pts = [];
+  for(let i=0; i<6; i++){
+    const a = Math.PI/180 * (60*i);
+    pts.push(`${(cx + HSZ*Math.cos(a)).toFixed(1)},${(cy + HSZ*Math.sin(a)).toFixed(1)}`);
+  }
+  return pts.join(" ");
+}
+function hexAdjCells(i){
+  const out = [];
+  HCELLS.forEach((c,j)=>{
+    if(i===j) return;
+    const dx = HCELLS[i].x - c.x, dy = HCELLS[i].y - c.y;
+    if(Math.sqrt(dx*dx + dy*dy) < 62) out.push(j);
+  });
+  return out;
+}
+const HNEI = HCELLS.map((_,i)=> hexAdjCells(i));
+let hplace = {}, hsel = null;
+function hAdj(){
+  const cellOf = {net: HNET_CELL};
+  Object.keys(hplace).forEach(id=> cellOf[id] = hplace[id]);
+  const adj = {};
+  const nodes = Object.keys(cellOf);
+  nodes.forEach(a=> nodes.forEach(b=>{
+    if(a!==b && HNEI[cellOf[a]].includes(cellOf[b])){
+      (adj[a] = adj[a] || new Set()).add(b);
+    }
+  }));
+  return adj;
+}
+function startHex(){
+  hplace = {}; hsel = null;
+  $("#hplay-title").textContent = PRAC.title + "（ヘックス盤面）";
+  $("#hplay-brief").innerHTML = PRAC.brief;
+  $("#hresult").className = ""; $("#hresult").innerHTML = "";
+  renderHex();
+  show("scr-hplay");
+}
+function renderHex(){
+  const cost = pracCost(hplace), over = cost > PRAC.budget;
+  const bud = $("#hplay-budget");
+  bud.innerHTML = `合計コスト <b>${cost}</b> ／ 予算 <b>${PRAC.budget}</b>${over? " ― 予算オーバー！":""}`;
+  bud.className = "budget" + (over? " over":"");
+  const cellCard = {};
+  Object.keys(hplace).forEach(id=> cellCard[hplace[id]] = id);
+  let s = `<svg class="board" viewBox="0 0 300 215">`;
+  HCELLS.forEach((c,i)=>{
+    if(i===HNET_CELL){
+      s += `<g class="hexcell netn"><polygon points="${hexPoints(c.x,c.y)}"/><text x="${c.x}" y="${c.y+4}">ネット</text></g>`;
+    }else if(cellCard[i]){
+      s += `<g class="hexcell full" data-cell="${i}"><polygon points="${hexPoints(c.x,c.y)}"/><text x="${c.x}" y="${c.y+4}">${SHORT[cellCard[i]]}</text></g>`;
+    }else{
+      s += `<g class="hexcell" data-cell="${i}"><polygon points="${hexPoints(c.x,c.y)}"/></g>`;
+    }
+  });
+  s += `</svg>`;
+  const bd = $("#hboard");
+  bd.innerHTML = s;
+  bd.querySelectorAll(".hexcell[data-cell]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const cell = +el.dataset.cell;
+      if(cellCard[cell]){ delete hplace[cellCard[cell]]; hsel = null; renderHex(); }
+      else if(hsel && !(hsel in hplace)){ hplace[hsel] = cell; hsel = null; renderHex(); }
+    });
+  });
+  pracHandHTML($("#hhand"), hplace, hsel, id=>{ hsel = (hsel===id? null: id); renderHex(); });
+}
+
+/* ---------- wiring ---------- */
+$("#btn-mode-prac").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
+$("#btn-prac-back").addEventListener("click", ()=> show("scr-mode"));
+$("#btn-prac-graph").addEventListener("click", startGraph);
+$("#btn-prac-hex").addEventListener("click", startHex);
+$("#btn-gmode-place").addEventListener("click", ()=> setGMode("place"));
+$("#btn-gmode-link").addEventListener("click", ()=> setGMode("link"));
+$("#btn-gjudge").addEventListener("click", ()=> pracJudge(gAdj(), gplace, "prac-g", $("#gresult")));
+$("#btn-hjudge").addEventListener("click", ()=> pracJudge(hAdj(), hplace, "prac-h", $("#hresult")));
+$("#btn-greset").addEventListener("click", startGraph);
+$("#btn-hreset").addEventListener("click", startHex);
+$("#btn-gback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
+$("#btn-hback").addEventListener("click", ()=>{ renderPrac(); show("scr-prac"); });
 </script>
 </body>
 </html>
