@@ -187,7 +187,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.15 — 研鑽編にランサムウェアのシナリオを追加</p>
+    <p class="ver">CLOUDSMITH prototype v0.16 — 「一番奥／一番手前」を置いたカードの中での相対位置に修正</p>
     <p class="ver" style="margin-top:6px">非公式の学習用ゲームです。登場するサービス名は各社の商標であり、各社との提携関係はありません。</p>
   </section>
 
@@ -354,7 +354,7 @@ const MISSIONS = [
       {must:true,  text:"大事なデータを置く", why:"守る対象そのものがないと、構成として完成しない。", test:b=>placed(b,"vault")},
       {must:true,  text:"大事なデータは、公開サーバーより奥に置く", why:"外に見せる物と、大事な物は置き場所を分ける。奥にあるほど外から届きにくい。", test:b=>placed(b,"web")&&placed(b,"vault")&&P(b,"vault")>P(b,"web")},
       {must:true,  text:"公開サーバーと大事なデータの間に「仕切り」を置く", why:"間に仕切りがあると、外からの通り道をここで止められる。", test:b=>placed(b,"web")&&placed(b,"vault")&&placed(b,"fw")&&P(b,"fw")>P(b,"web")&&P(b,"fw")<P(b,"vault")},
-      {must:false, text:"大事なデータを一番奥（6）に置く", why:"一番奥が、最も外から遠くて安全な場所。", test:b=>P(b,"vault")===5},
+      {must:false, text:"大事なデータを一番奥に置く", why:"置いたカードの中で一番奥が、最も外から遠くて安全な場所。", test:b=>placed(b,"vault")&&b.slice(P(b,"vault")+1).every(x=>!x)},
       {must:false, text:"見張り記録を置く", why:"何かあったとき、記録がないと「何が起きたか」が分からない。", test:b=>placed(b,"log")},
       {must:false, text:"控えを、公開サーバーより奥に置く", why:"壊されたり消されたりしても、控えがあれば元に戻せる。控えも、外から直接触れる場所には置かない。", test:b=>placed(b,"copy")&&placed(b,"web")&&P(b,"copy")>P(b,"web")}
     ]
@@ -380,7 +380,7 @@ const MISSIONS = [
     hand:["web","fw","gate","seal","vault","copy","log"], budget:13, stars3:1,
     rules:[
       {must:true,  text:"公開サーバーを置く", why:"ホームページの公開は続ける、が前提。", test:b=>placed(b,"web")},
-      {must:true,  text:"大事なデータを一番奥（6）に置く", why:"最も大事な物は、最も外から遠い場所へ。", test:b=>P(b,"vault")===5},
+      {must:true,  text:"大事なデータを一番奥に置く", why:"最も大事な物は、置いたカードの中で最も外から遠い場所へ。", test:b=>placed(b,"vault")&&b.slice(P(b,"vault")+1).every(x=>!x)},
       {must:true,  text:"大事なデータの直前に「封印」を置く", why:"万一たどり着かれても、中身を見られないようにする最後の守り。", test:b=>placed(b,"seal")&&placed(b,"vault")&&P(b,"seal")===P(b,"vault")-1},
       {must:true,  text:"「仕切り」の奥に「門番」を置く（二重の守り）", why:"仕切りで区切り、その内側で本人を確かめる。守りは重ねるもの。", test:b=>placed(b,"fw")&&placed(b,"gate")&&P(b,"gate")>P(b,"fw")},
       {must:true,  text:"公開サーバーは「仕切り」より手前に置く", why:"外に見せる物は仕切りの外側、守る物は内側。この線引きが崩れると守りにならない。", test:b=>placed(b,"web")&&placed(b,"fw")&&P(b,"web")<P(b,"fw")},
@@ -410,7 +410,7 @@ const MISSIONS = [
     rules:[
       {must:true,  text:"社内サーバーを置く", why:"使う道具そのものが要る。", test:b=>placed(b,"inside")},
       {must:true,  text:"大事なデータを置く", why:"守る対象そのもの。置き忘れると、構成として完成しない。", test:b=>placed(b,"vault")},
-      {must:true,  text:"専用通路を、一番手前（1）に置く", why:"拠点との接続は、構成の一番外側が入口になる。外の通り道を使わないのが、この通路の意味。", test:b=>P(b,"line")===0},
+      {must:true,  text:"専用通路を、一番手前に置く", why:"拠点との接続は、置いたカードの中で一番外側が入口になる。外の通り道を使わないのが、この通路の意味。", test:b=>placed(b,"line")&&b.slice(0,P(b,"line")).every(x=>!x)},
       {must:true,  text:"公開サーバーは置かない", why:"拠点との接続に、外に見せる置き場は要らない。入口が増えるだけ。", test:b=>!placed(b,"web")},
       {must:true,  text:"「仕切り」を、専用通路と社内サーバーの間に置く", why:"専用通路だから安全、ではない。通路の先にも区切りは要る。「閉域なら安全」は、実務で一番ありがちな誤解。", test:b=>placed(b,"fw")&&placed(b,"line")&&placed(b,"inside")&&P(b,"fw")>P(b,"line")&&P(b,"fw")<P(b,"inside")},
       {must:true,  text:"「門番」を、社内サーバーの手前に置く", why:"専用通路の先でも、使う人が本人かどうかは確かめる。", test:b=>placed(b,"gate")&&placed(b,"inside")&&P(b,"gate")<P(b,"inside")},
