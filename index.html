@@ -187,7 +187,7 @@
     <img src="assets/logo.jpg" alt="CLOUDSMITH — Forge Your Secure Environment">
     <div style="height:18px"></div>
     <button class="btn primary" id="btn-start">▶︎はじめる</button>
-    <p class="ver">CLOUDSMITH prototype v0.16 — 「一番奥／一番手前」を置いたカードの中での相対位置に修正</p>
+    <p class="ver">CLOUDSMITH prototype v0.17 — 置き場の数をミッションごとに（ミッション1は5マス）</p>
     <p class="ver" style="margin-top:6px">非公式の学習用ゲームです。登場するサービス名は各社の商標であり、各社との提携関係はありません。</p>
   </section>
 
@@ -348,7 +348,7 @@ const MISSIONS = [
   {
     id:"m1", title:"ミッション1 ― ホームページを公開しよう",
     brief:"会社のホームページを、世界中の人に見せたい。<b>公開サーバー</b>で見せつつ、会社の<b>大事なデータ</b>は外から直接触られないように守ること。",
-    hand:["web","fw","vault","log","copy"], budget:10, stars3:3,
+    hand:["web","fw","vault","log","copy"], budget:10, stars3:3, slots:5,
     rules:[
       {must:true,  text:"公開サーバーを置く", why:"見せたいものは、まず外から届く場所に置くのが基本。", test:b=>placed(b,"web")},
       {must:true,  text:"大事なデータを置く", why:"守る対象そのものがないと、構成として完成しない。", test:b=>placed(b,"vault")},
@@ -468,8 +468,9 @@ function renderSelect(){
 }
 /* ---- play ---- */
 function startMission(i){
-  cur = i; board = Array(SLOTS).fill(null); selected = null;
+  cur = i;
   const m = MISSIONS[cur];
+  board = Array(m.slots||SLOTS).fill(null); selected = null;
   $("#play-title").textContent = m.title;
   $("#play-brief").innerHTML = m.brief;
   $("#result").className = ""; $("#result").innerHTML = "";
@@ -554,7 +555,7 @@ function judge(){
 $("#btn-start").addEventListener("click", ()=> show("scr-mode"));
 $("#btn-to-title").addEventListener("click", ()=> show("scr-title"));
 $("#btn-to-select").addEventListener("click", ()=>{ renderSelect(); show("scr-select"); });
-$("#btn-reset").addEventListener("click", ()=>{ board = Array(SLOTS).fill(null); selected=null; $("#result").className=""; $("#result").innerHTML=""; renderPlay(); });
+$("#btn-reset").addEventListener("click", ()=>{ board = Array(MISSIONS[cur].slots||SLOTS).fill(null); selected=null; $("#result").className=""; $("#result").innerHTML=""; renderPlay(); });
 $("#btn-judge").addEventListener("click", judge);
 </script>
 <script>
